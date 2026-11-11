@@ -50,98 +50,21 @@ firephlox_revive() {
 	# --- Revive 1: Locate and stage the snapshot -------------------------
 	firephlox_section 'Revive 1 · Extracting the genome — staging snapshot'
 
-	firephlox_info "Locating specimen ${snap_id}…"
-	local zip_file
-	zip_file="$(_fp_revive_find_zip "${snap_id}")"
-	[[ -n "${zip_file}" ]] || \
-		firephlox_die "Specimen ${snap_id} not found in the snapd vault. Run: snap saved firefox"
-
-	local zip_size
-	zip_size="$(firephlox_privileged du -h "${zip_file}" 2>/dev/null | cut -f1 || true)"
-	firephlox_ok "Specimen located (${zip_size}): ${zip_file}"
-
-	local stage_dir tmp_zip
-	stage_dir="$(mktemp -d)"
-	tmp_zip="$(mktemp --suffix=.zip)"
+	local stage_dir; stage_dir="$(mktemp -d)"
 	# shellcheck disable=SC2064
-	trap "rm -f -- '${tmp_zip}'; rm -rf -- '${stage_dir}'" RETURN EXIT
+	trap "rm -rf -- '${stage_dir}'" RETURN EXIT
 
 	if firephlox_is_dry_run; then
-		firephlox_info "(dry-run) would stage and dissect ${zip_file}"
-		firephlox_info "(dry-run) would transplant all viable tissue into active profile"
+		local excl_note=''
+		[[ -n "${FIREPHLOX_REVIVE_EXCLUDE:-}" ]] && excl_note=" (excluded: ${FIREPHLOX_REVIVE_EXCLUDE})"
+		[[ -n "${FIREPHLOX_PREFS_ONLY:-}" ]]     && excl_note="${excl_note} (prefs-only: ${FIREPHLOX_PREFS_ONLY})"
+		firephlox_info "(dry-run) would stage specimen ${snap_id}"
+		firephlox_info "(dry-run) would transplant all viable tissue into active profile${excl_note}"
 		return 0
 	fi
 
-	firephlox_info 'Staging specimen (this may take a moment)…'
-	if firephlox_path_writable "${zip_file}"; then
-		cp "${zip_file}" "${tmp_zip}"
-	else
-		firephlox_privileged cp "${zip_file}" "${tmp_zip}"
-		firephlox_privileged chown "$(id -u):$(id -g)" "${tmp_zip}"
-	fi
-
-	# Peek at the internal ZIP layout so we can diagnose extraction issues.
-	firephlox_info 'Inspecting specimen structure…'
-	python3 - "${tmp_zip}" "${stage_dir}" <<'PYTHON'
-import sys, os, zipfile, tarfile, warnings
-warnings.filterwarnings('ignore')  # suppress Python 3.12+ tarfile DeprecationWarnings
-
-tmp_zip, stage_dir = sys.argv[1], sys.argv[2]
-
-with zipfile.ZipFile(tmp_zip, 'r') as z:
-    names = z.namelist()
-    for n in names[:12]:
-        print(f'  zip: {n}', flush=True)
-    z.extractall(stage_dir)
-
-def unpack(tar_path):
-    base = tar_path
-    for ext in ('.tar.gz', '.tgz', '.tar'):
-        if base.endswith(ext):
-            base = base[:-len(ext)]
-            break
-    os.makedirs(base, exist_ok=True)
-    skipped = 0
-    try:
-        with tarfile.open(tar_path, 'r:*') as t:
-            for member in t.getmembers():
-                # Symlinks pointing to absolute paths cannot be safely extracted
-                # and are irrelevant for settings recovery — skip them.
-                if (member.issym() or member.islnk()) and os.path.isabs(member.linkname):
-                    skipped += 1
-                    continue
-                try:
-                    t.extract(member, base)
-                except Exception:
-                    skipped += 1
-    except Exception as e:
-        print(f'  warn: cannot read {os.path.basename(tar_path)}: {e}', flush=True)
-        return
-    if skipped:
-        print(f'  info: {os.path.basename(tar_path)}: {skipped} unsafe symlink(s) skipped', flush=True)
-
-for root, _dirs, files in os.walk(stage_dir):
-    for fname in sorted(files):
-        if any(fname.endswith(ext) for ext in ('.tar.gz', '.tgz', '.tar')):
-            unpack(os.path.join(root, fname))
-PYTHON
-	rm -f "${tmp_zip}"
-	# Ensure the current user can traverse all extracted directories.
-	chmod -R u+rX "${stage_dir}" 2>/dev/null || true
-	firephlox_ok 'Specimen staged and unpacked.'
-
-	# Locate the Firefox profile inside the extracted snapshot.
-	local src_perms
-	src_perms="$(_fp_revive_find_in_stage "${stage_dir}" 'permissions.sqlite')"
-	if [[ -z "${src_perms}" ]]; then
-		firephlox_warn 'Could not find permissions.sqlite — first 10 paths in staged specimen:'
-		find "${stage_dir}" -maxdepth 5 2>/dev/null | head -10 | \
-			while IFS= read -r p; do firephlox_info "  ${p#"${stage_dir}"/}"; done || true
-		firephlox_die 'Could not locate a Firefox profile inside this specimen.'
-	fi
-
-	local src_profile; src_profile="$(dirname "${src_perms}")"
-	firephlox_ok "Firefox profile located in specimen: $(basename "${src_profile}")"
+	_fp_stage_snapshot "${snap_id}" "${stage_dir}"
+	local src_profile="${_FP_STAGED_PROFILE}"
 
 	# --- Revive 2: Pre-operative assessment ------------------------------
 	firephlox_section 'Revive 2 · Pre-operative tissue assessment'
@@ -374,6 +297,91 @@ PYTHON
 	firephlox_info 'The source specimen was not disturbed.'
 	firephlox_info 'Remove user.js from the profile to revert transplanted preferences if issues arise.'
 	firephlox_info 'Restart Firefox to begin recovery.'
+}
+
+# _fp_stage_snapshot <snap_id> <stage_dir>
+# Locates, copies, and fully unpacks a snap data snapshot into stage_dir.
+# Sets _FP_STAGED_PROFILE to the absolute path of the Firefox profile found
+# inside the staged data. Called by both firephlox_triage and firephlox_revive.
+_fp_stage_snapshot() {
+	local snap_id="$1" stage_dir="$2"
+
+	firephlox_info "Locating specimen ${snap_id}…"
+	local zip_file; zip_file="$(_fp_revive_find_zip "${snap_id}")"
+	[[ -n "${zip_file}" ]] || \
+		firephlox_die "Specimen ${snap_id} not found in the snapd vault. Run: snap saved firefox"
+
+	local zip_size
+	zip_size="$(firephlox_privileged du -h "${zip_file}" 2>/dev/null | cut -f1 || true)"
+	firephlox_ok "Specimen (${zip_size}): ${zip_file}"
+
+	local tmp_zip; tmp_zip="$(mktemp --suffix=.zip)"
+	# shellcheck disable=SC2064
+	trap "rm -f -- '${tmp_zip}'" RETURN
+
+	firephlox_info 'Staging specimen (this may take a moment)…'
+	if firephlox_path_writable "${zip_file}"; then
+		cp "${zip_file}" "${tmp_zip}"
+	else
+		firephlox_privileged cp "${zip_file}" "${tmp_zip}"
+		firephlox_privileged chown "$(id -u):$(id -g)" "${tmp_zip}"
+	fi
+
+	firephlox_info 'Inspecting specimen structure…'
+	python3 - "${tmp_zip}" "${stage_dir}" <<'PYTHON'
+import sys, os, zipfile, tarfile, warnings
+warnings.filterwarnings('ignore')
+
+tmp_zip, stage_dir = sys.argv[1], sys.argv[2]
+
+with zipfile.ZipFile(tmp_zip, 'r') as z:
+    for n in z.namelist()[:12]:
+        print(f'  zip: {n}', flush=True)
+    z.extractall(stage_dir)
+
+def unpack(tar_path):
+    base = tar_path
+    for ext in ('.tar.gz', '.tgz', '.tar'):
+        if base.endswith(ext):
+            base = base[:-len(ext)]
+            break
+    os.makedirs(base, exist_ok=True)
+    skipped = 0
+    try:
+        with tarfile.open(tar_path, 'r:*') as t:
+            for member in t.getmembers():
+                if (member.issym() or member.islnk()) and os.path.isabs(member.linkname):
+                    skipped += 1
+                    continue
+                try:
+                    t.extract(member, base)
+                except Exception:
+                    skipped += 1
+    except Exception as e:
+        print(f'  warn: cannot read {os.path.basename(tar_path)}: {e}', flush=True)
+        return
+    if skipped:
+        print(f'  info: {os.path.basename(tar_path)}: {skipped} unsafe symlink(s) skipped', flush=True)
+
+for root, _dirs, files in os.walk(stage_dir):
+    for fname in sorted(files):
+        if any(fname.endswith(ext) for ext in ('.tar.gz', '.tgz', '.tar')):
+            unpack(os.path.join(root, fname))
+PYTHON
+	rm -f "${tmp_zip}"
+	chmod -R u+rX "${stage_dir}" 2>/dev/null || true
+	firephlox_ok 'Specimen staged and unpacked.'
+
+	local src_perms
+	src_perms="$(_fp_revive_find_in_stage "${stage_dir}" 'permissions.sqlite')"
+	if [[ -z "${src_perms}" ]]; then
+		firephlox_warn 'Could not find permissions.sqlite — first 10 paths in staged specimen:'
+		find "${stage_dir}" -maxdepth 5 2>/dev/null | head -10 | \
+			while IFS= read -r p; do firephlox_info "  ${p#"${stage_dir}"/}"; done || true
+		firephlox_die 'Could not locate a Firefox profile inside this specimen.'
+	fi
+	_FP_STAGED_PROFILE="$(dirname "${src_perms}")"
+	firephlox_ok "Firefox profile located in specimen: $(basename "${_FP_STAGED_PROFILE}")"
 }
 
 # Returns 0 (true) when the given category is listed in FIREPHLOX_REVIVE_EXCLUDE.
