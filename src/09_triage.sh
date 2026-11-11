@@ -82,7 +82,7 @@ firephlox_triage() {
 
 		# Syntax validation — a partial write (e.g. from a crash mid-stream)
 		# leaves truncated or malformed lines that cause non-obvious runtime failures.
-		local syntax_errors syntax_count
+		local syntax_errors
 		syntax_errors="$(python3 - "${prefs}" <<'PYTHON' 2>/dev/null || true
 import re, sys
 pref_re = re.compile(r'^user_pref\("[^"]+",\s*.+\);$')
@@ -101,9 +101,8 @@ if len(errors) > 5:
 sys.exit(1 if errors else 0)
 PYTHON
 )"
-		syntax_count="$(printf '%s\n' "${syntax_errors}" | grep -c 'line ' 2>/dev/null || printf '0')"
-		if [[ "${syntax_count}" -gt 0 ]]; then
-			firephlox_error "prefs.js syntax damage detected — ${syntax_count} malformed pathway(s):"
+		if [[ -n "${syntax_errors}" ]]; then
+			firephlox_error 'prefs.js syntax damage detected:'
 			printf '%s\n' "${syntax_errors}" | while IFS= read -r line; do
 				firephlox_warn "  ${line}"
 			done
