@@ -1,153 +1,153 @@
 # shellcheck shell=bash
 # 09_triage.sh — Task T: non-destructive profile diagnostics.
 #
-# Inspects the active Firefox profile for signs of corruption, known-bad
-# preferences and configuration drift. Never writes, deletes or modifies
-# anything. Snapshots are never touched.
+#   "Before I can treat the patient, I need to know what I'm dealing with."
+#       — Dr. Phlox
+#
+# A complete diagnostic cycle over the active Firefox profile. Never writes,
+# deletes or modifies anything. Snapshots are never touched.
 #
 # Shared helpers (_fp_triage_sqlite_check, _fp_triage_pref) are also called
 # by 10_revive.sh, which is sourced after this module.
 
 firephlox_triage() {
-	firephlox_section 'Triage · Profile diagnostics'
+	firephlox_section 'Triage · Initiating diagnostic cycle'
 
 	if firephlox_firefox_running; then
-		firephlox_die 'Firefox is currently running. Close it and re-run.'
+		firephlox_die 'Firefox is currently running. The patient must be sedated (closed) before examination.'
 	fi
 
 	local -a profiles
 	mapfile -t profiles < <(firephlox_discover_profiles)
-	[[ ${#profiles[@]} -gt 0 ]] || firephlox_die 'No Firefox profiles found. Has Firefox been launched at least once?'
+	[[ ${#profiles[@]} -gt 0 ]] || \
+		firephlox_die 'No profiles found. Has the patient been admitted (Firefox launched) at least once?'
 
-	# Most recently modified profile wins when several exist.
+	# Most recently modified profile is the primary patient.
 	local profile
 	profile="$(
 		for p in "${profiles[@]}"; do
 			printf '%s %s\n' "$(stat -c '%Y' "${p}" 2>/dev/null || printf '0')" "${p}"
 		done | sort -rn | head -1 | cut -d' ' -f2-
 	)"
-	firephlox_info "Profile: ${profile}"
+	firephlox_info "Patient: ${profile}"
 	printf '\n'
 
-	# --- Check 1: Firefox version compatibility -------------------------
-	firephlox_section 'Triage 1 · Version compatibility'
+	# --- Check 1: Vital signs — version compatibility -------------------
+	firephlox_section 'Triage 1 · Vital signs — version compatibility'
 	local compat_ini="${profile}/compatibility.ini"
 	if [[ -f "${compat_ini}" ]]; then
-		local last_ver
+		local last_ver snap_ver
 		last_ver="$(awk -F= '/^LastVersion=/{print $2}' "${compat_ini}")"
-		local snap_ver
 		snap_ver="$(snap list firefox 2>/dev/null | awk 'NR==2{print $2}')"
-		firephlox_ok  "Profile last used by: Firefox ${last_ver}"
-		[[ -n "${snap_ver}" ]] && firephlox_info "Installed snap:        Firefox ${snap_ver}"
-		# Flag a version mismatch — a common trigger for first-launch migration failures.
+		firephlox_ok  "Profile last seen by: Firefox ${last_ver}"
+		[[ -n "${snap_ver}" ]] && firephlox_info "Current snap version:  Firefox ${snap_ver}"
 		if [[ -n "${snap_ver}" && "${last_ver%%.*}" != "${snap_ver%%.*}" ]]; then
-			firephlox_warn "Major version mismatch — profile was last written by ${last_ver}, snap is ${snap_ver}. A failed first-launch migration may have caused corruption."
+			firephlox_warn "Major version mismatch — profile was last written by ${last_ver}, snap is ${snap_ver}. A failed first-launch migration may have caused the presenting symptoms."
 		fi
 	else
-		firephlox_warn 'compatibility.ini absent — profile has never been used or was deleted.'
+		firephlox_warn 'compatibility.ini absent — profile has never been activated or was excised.'
 	fi
 
-	# --- Check 2: Core database integrity --------------------------------
-	firephlox_section 'Triage 2 · Core database integrity'
+	# --- Check 2: Cellular integrity — core database scan ---------------
+	firephlox_section 'Triage 2 · Cellular integrity — core database scan'
 	local -a dbs=(permissions.sqlite cookies.sqlite places.sqlite
 	               formhistory.sqlite storage.sqlite favicons.sqlite)
 	local db result
 	for db in "${dbs[@]}"; do
 		local path="${profile}/${db}"
 		if [[ ! -f "${path}" ]]; then
-			firephlox_info "${db} — absent (normal on a fresh profile)"
+			firephlox_info "${db} — not yet grown (normal on a fresh profile)"
 			continue
 		fi
 		result="$(_fp_triage_sqlite_check "${path}")"
 		if [[ "${result}" == 'ok' ]]; then
-			firephlox_ok   "${db} — intact"
+			firephlox_ok   "${db} — cellular structure intact"
 		else
 			firephlox_error "${db} — ${result}"
 		fi
 	done
 
-	# --- Check 3: Preference analysis ------------------------------------
-	firephlox_section 'Triage 3 · Preference analysis'
+	# --- Check 3: Neural pathway analysis — preferences -----------------
+	firephlox_section 'Triage 3 · Neural pathway analysis — preferences'
 	local prefs="${profile}/prefs.js"
 	if [[ ! -f "${prefs}" ]]; then
-		firephlox_warn 'prefs.js absent — profile is uninitialised or was stripped.'
+		firephlox_warn 'prefs.js absent — the neural pathways have not been mapped.'
 	else
 		local entry_count dup_count
 		entry_count="$(grep -c 'user_pref(' "${prefs}" 2>/dev/null || printf '0')"
 		dup_count="$(awk -F'"' '/^user_pref\(/{print $2}' "${prefs}" | sort | uniq -d | wc -l)"
-		firephlox_ok "prefs.js — ${entry_count} entries"
+		firephlox_ok "prefs.js — ${entry_count} neural pathways mapped"
 		[[ "${dup_count}" -gt 0 ]] && \
-			firephlox_warn "Duplicate pref keys: ${dup_count} — may cause unpredictable behaviour."
+			firephlox_warn "Conflicting neural pathways: ${dup_count} duplicate pref keys detected."
 
 		local val
 		val="$(_fp_triage_pref "${prefs}" 'privacy.resistFingerprinting')"
 		[[ "${val}" == 'true' ]] && \
-			firephlox_warn 'privacy.resistFingerprinting = true — strips referrer headers on cross-site requests; known to break YouTube CDN auth (HTTP 403 on video playback).'
+			firephlox_warn 'privacy.resistFingerprinting = true — this pathway strips outgoing referrer headers on cross-site requests; documented cause of HTTP 403 on CDN-authenticated video (YouTube).'
 
 		val="$(_fp_triage_pref "${prefs}" 'datareporting.policy.dataSubmissionPolicyAcceptedVersion')"
 		[[ "${val}" == '0' ]] && \
-			firephlox_warn 'dataSubmissionPolicyAcceptedVersion = 0 — Firefox will show the data-policy nag on every launch.'
+			firephlox_warn 'dataSubmissionPolicyAcceptedVersion = 0 — Firefox will present the data-policy consent screen on every admission.'
 
 		val="$(_fp_triage_pref "${prefs}" 'xpinstall.signatures.required')"
 		[[ "${val}" == 'false' ]] && \
-			firephlox_warn 'xpinstall.signatures.required = false — unsigned extensions load without prompt.'
+			firephlox_warn 'xpinstall.signatures.required = false — unsigned implants will load without challenge.'
 
 		val="$(_fp_triage_pref "${prefs}" 'media.hardware-video-decoding.enabled')"
 		[[ "${val}" == 'false' ]] && \
-			firephlox_info 'media.hardware-video-decoding.enabled = false — hardware video decode deliberately disabled.'
+			firephlox_info 'media.hardware-video-decoding.enabled = false — hardware decode pathway deliberately bypassed.'
 
 		val="$(_fp_triage_pref "${prefs}" 'browser.contentblocking.category')"
 		[[ "${val}" == '"strict"' ]] && \
-			firephlox_info 'ETP mode: strict — fingerprinting protection and referrer stripping active; may affect CDN-authenticated video on sites like YouTube.'
+			firephlox_info 'ETP mode: strict — fingerprinting countermeasures active; referrer headers stripped on cross-site requests.'
 	fi
 
-	# --- Check 4: Session state ------------------------------------------
-	firephlox_section 'Triage 4 · Session state'
+	# --- Check 4: Synaptic continuity — session state -------------------
+	firephlox_section 'Triage 4 · Synaptic continuity — session state'
 	local ss="${profile}/sessionstore.jsonlz4"
 	local ss_bak="${profile}/sessionstore-backups/previous.jsonlz4"
 	if [[ -f "${ss}" ]]; then
 		local kb; kb="$(du -k "${ss}" | cut -f1)"
-		firephlox_ok "sessionstore.jsonlz4 present (${kb}K)"
+		firephlox_ok "sessionstore.jsonlz4 intact (${kb}K)"
 	elif [[ -f "${ss_bak}" ]]; then
-		firephlox_warn 'sessionstore.jsonlz4 absent; backup copy found — Firefox likely crashed on last exit.'
+		firephlox_warn 'sessionstore.jsonlz4 absent; emergency backup found — the patient experienced an uncontrolled shutdown.'
 	else
-		firephlox_info 'sessionstore.jsonlz4 absent — either purged or Firefox exited cleanly with no tabs to restore.'
+		firephlox_info 'sessionstore.jsonlz4 absent — either purged or the patient discharged cleanly with no open tabs.'
 	fi
 
-	# --- Check 5: Crash reports ------------------------------------------
-	firephlox_section 'Triage 5 · Crash reports'
+	# --- Check 5: Trauma record — crash reports -------------------------
+	firephlox_section 'Triage 5 · Trauma record — crash reports'
 	local crashes_dir="${profile}/crashes"
 	if [[ -d "${crashes_dir}" ]]; then
 		local submitted pending
 		submitted="$(find "${crashes_dir}/submitted" -name '*.txt' 2>/dev/null | wc -l)"
 		pending="$(find  "${crashes_dir}/pending"   -name '*.dmp' 2>/dev/null | wc -l)"
-		[[ "${submitted}" -gt 0 ]] && firephlox_warn "${submitted} submitted crash report(s) on record."
-		[[ "${pending}"   -gt 0 ]] && firephlox_warn "${pending} pending crash dump(s) — Firefox crashed before it could submit."
-		[[ "${submitted}" -eq 0 && "${pending}" -eq 0 ]] && firephlox_ok 'No crash reports.'
+		[[ "${submitted}" -gt 0 ]] && firephlox_warn "${submitted} filed trauma report(s) on record."
+		[[ "${pending}"   -gt 0 ]] && firephlox_warn "${pending} unsubmitted crash dump(s) — the patient collapsed before the report could be filed."
+		[[ "${submitted}" -eq 0 && "${pending}" -eq 0 ]] && firephlox_ok 'No trauma on record.'
 	else
-		firephlox_ok 'No crash directory — no recorded crashes.'
+		firephlox_ok 'Trauma directory absent — the patient has led a remarkably incident-free life.'
 	fi
 
-	# --- Check 6: Extension inventory ------------------------------------
-	firephlox_section 'Triage 6 · Extensions'
+	# --- Check 6: Implant inventory — extensions ------------------------
+	firephlox_section 'Triage 6 · Implant inventory — extensions'
 	local ext_json="${profile}/extensions.json"
 	if [[ -f "${ext_json}" ]]; then
 		local ext_count
 		ext_count="$(python3 -c "
 import json
-d = json.load(open('${ext_json}'))
-print(len(d.get('addons', [])))
+print(len(json.load(open('${ext_json}')).get('addons', [])))
 " 2>/dev/null || printf '?')"
-		firephlox_ok "${ext_count} extension(s) registered in extensions.json"
+		firephlox_ok "${ext_count} implant(s) registered in extensions.json"
 	else
 		firephlox_info 'extensions.json absent.'
 	fi
 	local orphan="${profile}/extensions/apple-music-shuffle@firephlox.xpi"
 	[[ -f "${orphan}" ]] && \
-		firephlox_warn "Orphaned firephlox XPI present: ${orphan} — no enterprise policy backing it."
+		firephlox_warn "Unrecognised foreign implant: ${orphan} — present without a valid enterprise policy to authorise it."
 
-	# --- Check 7: Snap interface connections -----------------------------
-	firephlox_section 'Triage 7 · Snap interfaces'
+	# --- Check 7: Life support — snap interface connections -------------
+	firephlox_section 'Triage 7 · Life support — snap interface connections'
 	if command -v snap >/dev/null 2>&1; then
 		local conns
 		conns="$(snap connections firefox 2>/dev/null)"
@@ -156,20 +156,21 @@ print(len(d.get('addons', [])))
 		if [[ -z "${hw}" || "${hw}" == '-' ]]; then
 			firephlox_info 'hardware-observe: disconnected'
 		else
-			firephlox_ok "hardware-observe: connected (${hw})"
+			firephlox_ok "hardware-observe: online (${hw})"
 		fi
 		if [[ -z "${gl}" || "${gl}" == '-' ]]; then
-			firephlox_info 'opengl: disconnected (may limit hardware decode fallback paths)'
+			firephlox_info 'opengl: disconnected (may limit hardware decode recovery pathways)'
 		else
-			firephlox_ok 'opengl: connected'
+			firephlox_ok 'opengl: online'
 		fi
 	else
-		firephlox_warn 'snap command not found; cannot check interface connections.'
+		firephlox_warn 'snap unavailable; cannot check life support interfaces.'
 	fi
 
 	printf '\n'
-	firephlox_ok 'Triage complete. Review any warnings above.'
-	firephlox_info 'To transplant settings from a snapshot: ./firephlox --revive=<snapshot-id>'
+	firephlox_ok 'Diagnostic cycle complete. The patient has my full attention.'
+	firephlox_info 'To salvage settings from a snapshot: ./firephlox --revive=<snapshot-id>'
+	firephlox_info 'Run: snap saved firefox  to list available specimens.'
 }
 
 # Returns "ok" or an error/corruption description for a SQLite database.
@@ -187,7 +188,7 @@ except Exception as e:
 PYTHON
 }
 
-# Prints the raw value of a pref from prefs.js, or empty string if absent.
+# Prints the raw value of a named pref from prefs.js, or empty string if absent.
 # Always exits 0.
 _fp_triage_pref() {
 	python3 - "$1" "$2" <<'PYTHON' 2>/dev/null || true
