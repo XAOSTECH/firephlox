@@ -51,6 +51,7 @@ FIREPHLOX_SIGN=0
 FIREPHLOX_RESTORE=0
 FIREPHLOX_TRIAGE=0
 FIREPHLOX_REVIVE_SNAPSHOT=''
+FIREPHLOX_FRESH=0
 
 usage() {
 	cat <<'USAGE'
@@ -63,7 +64,8 @@ Options:
   -y, --yes         Assume "yes" for the cache-purge confirmation.
   -r, --restore     Undo all firephlox changes and return Firefox to its default state.
   -t, --triage      Inspect the active profile for corruption and known-bad configuration.
-      --revive=<id> Dissect a snap data snapshot and transplant its settings into the active profile.
+      --revive=<id> Dissect a snap data snapshot and transplant its settings.
+      --fresh       With --revive: cultivate a fresh clone (archive current profile first).
       --no-purge    Skip Task 3 (cache/telemetry purge) entirely.
       --no-shuffle  Skip Task 4 (True Shuffle extension deployment).
       --sign        Sign the extension via Mozilla AMO (Task 5). Required once
@@ -92,6 +94,7 @@ parse_args() {
 			-r|--restore)   FIREPHLOX_RESTORE=1 ;;
 			-t|--triage)    FIREPHLOX_TRIAGE=1 ;;
 			--revive=*)     FIREPHLOX_REVIVE_SNAPSHOT="${1#*=}" ;;
+			--fresh)        FIREPHLOX_FRESH=1 ;;
 			--no-purge)     FIREPHLOX_SKIP_PURGE=1 ;;
 			--no-shuffle)   FIREPHLOX_SKIP_SHUFFLE=1 ;;
 			--sign)         FIREPHLOX_SIGN=1 ;;
@@ -120,7 +123,7 @@ main() {
 		source "${module}"
 	done
 
-	export FIREPHLOX_DRY_RUN FIREPHLOX_ASSUME_YES FIREPHLOX_SKIP_PURGE FIREPHLOX_SKIP_SHUFFLE FIREPHLOX_SIGN FIREPHLOX_AMO_KEY FIREPHLOX_AMO_SECRET FIREPHLOX_SIGNED_XPI FIREPHLOX_RESTORE FIREPHLOX_TRIAGE FIREPHLOX_REVIVE_SNAPSHOT
+	export FIREPHLOX_DRY_RUN FIREPHLOX_ASSUME_YES FIREPHLOX_SKIP_PURGE FIREPHLOX_SKIP_SHUFFLE FIREPHLOX_SIGN FIREPHLOX_AMO_KEY FIREPHLOX_AMO_SECRET FIREPHLOX_SIGNED_XPI FIREPHLOX_RESTORE FIREPHLOX_TRIAGE FIREPHLOX_REVIVE_SNAPSHOT FIREPHLOX_FRESH
 
 	firephlox_banner
 	firephlox_is_dry_run && firephlox_warn 'DRY-RUN mode: no files will be written or deleted.'

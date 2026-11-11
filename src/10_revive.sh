@@ -226,21 +226,44 @@ PYTHON
 	printf '\n'
 	firephlox_info "Assessment complete: ${viable_count} viable tissue type(s), ${degraded_count} degraded."
 
-	# --- Confirm ---------------------------------------------------------
-	if ! firephlox_confirm 'Proceed with surgical transplant into the active profile?'; then
-		firephlox_warn 'Salvage protocol aborted.'
-		return 0
-	fi
+	# --- Revive 3: Recipient selection -----------------------------------
+	firephlox_section 'Revive 3 · Recipient selection'
 
-	# Locate the active (destination) profile.
 	local -a dst_profiles
 	mapfile -t dst_profiles < <(firephlox_discover_profiles)
 	[[ ${#dst_profiles[@]} -gt 0 ]] || firephlox_die 'No active profile found to receive the transplant.'
 	local dst_profile="${dst_profiles[0]}"
-	firephlox_info "Recipient: ${dst_profile}"
 
-	# --- Revive 3: Surgical transplant -----------------------------------
-	firephlox_section 'Revive 3 · Surgical transplant'
+	local recipient_mode
+	if [[ "${FIREPHLOX_FRESH:-0}" == '1' ]]; then
+		recipient_mode='fresh'
+	elif [[ "${FIREPHLOX_ASSUME_YES:-0}" == '1' ]]; then
+		recipient_mode='active'
+	else
+		printf '\n'
+		printf '%s[ .. ]%s  [1] Active profile  — graft donor settings into the living host as-is\n' "${FP_BLUE}" "${FP_RESET}"
+		printf '%s[ .. ]%s  [2] Fresh clone     — archive the host, cultivate a sterile new profile, then transplant\n' "${FP_BLUE}" "${FP_RESET}"
+		printf '%s[ .. ]%s  [q] Abort\n' "${FP_BLUE}" "${FP_RESET}"
+		printf '\n'
+		local choice=''
+		while [[ "${choice}" != '1' && "${choice}" != '2' && "${choice}" != 'q' ]]; do
+			read -r -p "  Recipient [1/2/q]: " choice
+		done
+		case "${choice}" in
+			1) recipient_mode='active' ;;
+			2) recipient_mode='fresh' ;;
+			q) firephlox_warn 'Salvage protocol aborted.'; return 0 ;;
+		esac
+	fi
+
+	firephlox_info "Host: ${dst_profile}"
+
+	if [[ "${recipient_mode}" == 'fresh' ]]; then
+		_fp_revive_prepare_clone "${dst_profile}"
+	fi
+
+	# --- Revive 4: Surgical transplant -----------------------------------
+	firephlox_section 'Revive 4 · Surgical transplant'
 
 	# 3A — SQLite databases
 	firephlox_info 'Cellular databases…'
@@ -329,6 +352,22 @@ PYTHON
 	firephlox_info 'The source specimen was not disturbed.'
 	firephlox_info 'Remove user.js from the profile to revert transplanted preferences if issues arise.'
 	firephlox_info 'Restart Firefox to begin recovery.'
+}
+
+# Archives the current profile and leaves the directory empty in place.
+# Firefox re-initialises all missing files on the next launch; profiles.ini
+# is untouched because the directory itself remains.
+_fp_revive_prepare_clone() {
+	local dst_profile="$1"
+	firephlox_section 'Revive 3B · Preparing the clone — sterilising the recipient site'
+	local backup="${dst_profile}.pre-revive-$(date +%Y%m%d%H%M%S)"
+	mkdir -p "${backup}"
+	local entry moved=0
+	while IFS= read -r -d '' entry; do
+		mv "${entry}" "${backup}/" 2>/dev/null && moved=$(( moved + 1 )) || true
+	done < <(find "${dst_profile}" -mindepth 1 -maxdepth 1 -print0 2>/dev/null)
+	firephlox_ok "${moved} item(s) archived to: $(basename "${backup}")"
+	firephlox_info 'A clean cultivation always improves the prognosis.'
 }
 
 # Locates the snapshot ZIP for a given ID in the snapd vault.
