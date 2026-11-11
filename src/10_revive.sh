@@ -302,10 +302,11 @@ _fp_revive_find_zip() {
 	fi
 }
 
-# Finds a named file inside the staged snapshot, constrained to firefox paths.
+# Finds a named file inside the staged snapshot. No path filter needed —
+# this tool only handles Firefox snapshots, so any match is the right file.
 _fp_revive_find_in_stage() {
 	local stage_dir="$1" filename="$2"
-	find "${stage_dir}" -name "${filename}" -path '*firefox*' 2>/dev/null | head -1
+	find "${stage_dir}" -name "${filename}" 2>/dev/null | head -1 || true
 }
 
 # Copies a SQLite database after an integrity check; skips degraded tissue.
