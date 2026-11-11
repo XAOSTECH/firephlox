@@ -231,7 +231,8 @@ PYTHON
 
 	local -a dst_profiles
 	mapfile -t dst_profiles < <(firephlox_discover_profiles)
-	[[ ${#dst_profiles[@]} -gt 0 ]] || firephlox_die 'No active profile found to receive the transplant.'
+	[[ ${#dst_profiles[@]} -gt 0 ]] || \
+		firephlox_die 'No active Firefox profile found. Launch Firefox once to initialise a profile, then re-run.'
 	local dst_profile="${dst_profiles[0]}"
 
 	local recipient_mode

@@ -20,7 +20,7 @@ firephlox_triage() {
 	local -a profiles
 	mapfile -t profiles < <(firephlox_discover_profiles)
 	[[ ${#profiles[@]} -gt 0 ]] || \
-		firephlox_die 'No profiles found. Has the patient been admitted (Firefox launched) at least once?'
+		firephlox_die 'No profiles found. Has the patient passed consultation (Firefox launched) at least once?'
 
 	# Most recently modified profile is the primary patient.
 	local profile
@@ -79,6 +79,39 @@ firephlox_triage() {
 		firephlox_ok "prefs.js — ${entry_count} neural pathways mapped"
 		[[ "${dup_count}" -gt 0 ]] && \
 			firephlox_warn "Conflicting neural pathways: ${dup_count} duplicate pref keys detected."
+
+		# Syntax validation — a partial write (e.g. from a crash mid-stream)
+		# leaves truncated or malformed lines that cause non-obvious runtime failures.
+		local syntax_errors syntax_count
+		syntax_errors="$(python3 - "${prefs}" <<'PYTHON' 2>/dev/null || true
+import re, sys
+pref_re = re.compile(r'^user_pref\("[^"]+",\s*.+\);$')
+errors = []
+with open(sys.argv[1]) as f:
+    for i, raw in enumerate(f, 1):
+        line = raw.rstrip('\n')
+        if not line or line.startswith('//') or line.startswith('/*') or line.startswith(' *'):
+            continue
+        if not pref_re.match(line):
+            errors.append(f'line {i}: {line[:80]}')
+for e in errors[:5]:
+    print(e)
+if len(errors) > 5:
+    print(f'... and {len(errors) - 5} more')
+sys.exit(1 if errors else 0)
+PYTHON
+)"
+		syntax_count="$(printf '%s\n' "${syntax_errors}" | grep -c 'line ' 2>/dev/null || printf '0')"
+		if [[ "${syntax_count}" -gt 0 ]]; then
+			firephlox_error "prefs.js syntax damage detected — ${syntax_count} malformed pathway(s):"
+			printf '%s\n' "${syntax_errors}" | while IFS= read -r line; do
+				firephlox_warn "  ${line}"
+			done
+			firephlox_warn 'A partial write (e.g. from a crash during media load) can break prefs.js silently.'
+			firephlox_warn 'Use --revive=<id> --fresh --exclude=prefs to restore without transplanting prefs.'
+		else
+			firephlox_ok 'prefs.js — syntax intact'
+		fi
 
 		local val
 		val="$(_fp_triage_pref "${prefs}" 'privacy.resistFingerprinting')"
