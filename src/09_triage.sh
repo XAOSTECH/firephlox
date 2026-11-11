@@ -236,6 +236,7 @@ _fp_triage_write_findings() {
 	local findings_dir="${HOME}/.cache/firephlox"
 	local findings_file="${findings_dir}/triage-${snap_id}.findings"
 	mkdir -p "${findings_dir}"
+	# Start empty; only populated when issues are found.
 	: > "${findings_file}"
 
 	# prefs.js syntax damage
@@ -260,8 +261,14 @@ PYTHON
 		fi
 	fi
 
-	firephlox_ok "Findings written: ${findings_file}"
-	firephlox_info 'Run --revive='"${snap_id}"' — revive will apply any recommendations automatically.'
+	# Only announce if there is something to announce.
+	if [[ -s "${findings_file}" ]]; then
+		firephlox_warn "Findings written: ${findings_file}"
+		firephlox_info "Run --revive=${snap_id} — recommendations will be applied automatically."
+	else
+		firephlox_ok "No adverse findings. Specimen appears fit for transplant."
+		rm -f "${findings_file}"  # remove empty file
+	fi
 }
 
 # Returns "ok" or an error/corruption description for a SQLite database.
