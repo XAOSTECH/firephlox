@@ -54,6 +54,7 @@ FIREPHLOX_TRIAGE=0
 FIREPHLOX_TRIAGE_SNAPSHOT=''
 FIREPHLOX_REVIVE_SNAPSHOT=''
 FIREPHLOX_REVIVE_EXCLUDE=''
+FIREPHLOX_PREFS_ONLY=''
 FIREPHLOX_FRESH=0
 
 usage() {
@@ -74,6 +75,10 @@ Options:
       --exclude=    With --revive: comma-separated list of categories to skip during transplant.
                     Categories: sqlite, credentials, config, extensions, prefs
                     Example: --exclude=extensions,prefs
+      --prefs-only= With --revive: transplant ONLY prefs whose keys start with
+                    one of the given comma-separated namespace prefixes.
+                    Implicitly enables the prefs category even if excluded.
+                    Example: --prefs-only=browser.contentblocking,extensions.webextensions
       --no-purge    Skip Task 3 (cache/telemetry purge) entirely.
       --no-shuffle  Skip Task 4 (True Shuffle extension deployment).
       --sign        Sign the extension via Mozilla AMO (Task 5). Required once
@@ -106,6 +111,7 @@ parse_args() {
 			--revive=*)     FIREPHLOX_REVIVE_SNAPSHOT="${1#*=}" ;;
 			--fresh)        FIREPHLOX_FRESH=1 ;;
 			--exclude=*)    FIREPHLOX_REVIVE_EXCLUDE="${1#*=}" ;;
+			--prefs-only=*) FIREPHLOX_PREFS_ONLY="${1#*=}" ;;
 			--no-purge)     FIREPHLOX_SKIP_PURGE=1 ;;
 			--no-shuffle)   FIREPHLOX_SKIP_SHUFFLE=1 ;;
 			--sign)         FIREPHLOX_SIGN=1 ;;
@@ -134,7 +140,7 @@ main() {
 		source "${module}"
 	done
 
-	export FIREPHLOX_DRY_RUN FIREPHLOX_ASSUME_YES FIREPHLOX_SKIP_PURGE FIREPHLOX_SKIP_SHUFFLE FIREPHLOX_SIGN FIREPHLOX_AMO_KEY FIREPHLOX_AMO_SECRET FIREPHLOX_SIGNED_XPI FIREPHLOX_RESTORE FIREPHLOX_RESTORE_SNAPSHOT FIREPHLOX_TRIAGE FIREPHLOX_TRIAGE_SNAPSHOT FIREPHLOX_REVIVE_SNAPSHOT FIREPHLOX_FRESH FIREPHLOX_REVIVE_EXCLUDE
+	export FIREPHLOX_DRY_RUN FIREPHLOX_ASSUME_YES FIREPHLOX_SKIP_PURGE FIREPHLOX_SKIP_SHUFFLE FIREPHLOX_SIGN FIREPHLOX_AMO_KEY FIREPHLOX_AMO_SECRET FIREPHLOX_SIGNED_XPI FIREPHLOX_RESTORE FIREPHLOX_RESTORE_SNAPSHOT FIREPHLOX_TRIAGE FIREPHLOX_TRIAGE_SNAPSHOT FIREPHLOX_REVIVE_SNAPSHOT FIREPHLOX_FRESH FIREPHLOX_REVIVE_EXCLUDE FIREPHLOX_PREFS_ONLY
 
 	firephlox_banner
 	firephlox_is_dry_run && firephlox_warn 'DRY-RUN mode: no files will be written or deleted.'
