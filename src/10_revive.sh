@@ -288,13 +288,17 @@ PYTHON
 # Lists the vault directory rather than glob-expanding inside it — bash
 # cannot expand a glob inside a root-owned directory, which would cause
 # the literal unexpanded pattern to be passed through even with sudo.
+# Uses if/fi (not [[ ]] &&) so the function always exits 0 and set -e
+# does not trigger when no match is found.
 _fp_revive_find_zip() {
 	local snap_id="$1"
 	local vault='/var/lib/snapd/snapshots'
 	local listing name
-	listing="$(ls "${vault}/" 2>/dev/null || firephlox_privileged ls "${vault}/" 2>/dev/null || true)"
+	listing="$(ls -1 "${vault}/" 2>/dev/null || firephlox_privileged ls -1 "${vault}/" 2>/dev/null || true)"
 	name="$(printf '%s\n' "${listing}" | grep -m1 "^${snap_id}_" || true)"
-	[[ -n "${name}" ]] && printf '%s/%s' "${vault}" "${name}"
+	if [[ -n "${name}" ]]; then
+		printf '%s/%s' "${vault}" "${name}"
+	fi
 }
 
 # Finds a named file inside the staged snapshot, constrained to firefox paths.
