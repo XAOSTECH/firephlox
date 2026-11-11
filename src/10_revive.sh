@@ -285,15 +285,16 @@ PYTHON
 }
 
 # Locates the snapshot ZIP for a given ID in the snapd vault.
+# Lists the vault directory rather than glob-expanding inside it — bash
+# cannot expand a glob inside a root-owned directory, which would cause
+# the literal unexpanded pattern to be passed through even with sudo.
 _fp_revive_find_zip() {
 	local snap_id="$1"
 	local vault='/var/lib/snapd/snapshots'
-	local match=''
-	match="$(ls "${vault}/${snap_id}_"*.zip 2>/dev/null | head -1 || true)"
-	if [[ -z "${match}" ]]; then
-		match="$(firephlox_privileged ls "${vault}/${snap_id}_"*.zip 2>/dev/null | head -1 || true)"
-	fi
-	printf '%s' "${match}"
+	local listing name
+	listing="$(ls "${vault}/" 2>/dev/null || firephlox_privileged ls "${vault}/" 2>/dev/null || true)"
+	name="$(printf '%s\n' "${listing}" | grep -m1 "^${snap_id}_" || true)"
+	[[ -n "${name}" ]] && printf '%s/%s' "${vault}" "${name}"
 }
 
 # Finds a named file inside the staged snapshot, constrained to firefox paths.
