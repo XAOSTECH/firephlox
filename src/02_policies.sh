@@ -47,6 +47,14 @@ _firephlox_policies_json() {
       "toolkit.telemetry.server": {
         "Value": "http://127.0.0.1",
         "Status": "locked"
+      },
+      "datareporting.dau.cachedUsageProfileGroupID": {
+        "Value": "",
+        "Status": "locked"
+      },
+      "datareporting.dau.cachedUsageProfileID": {
+        "Value": "",
+        "Status": "locked"
       }
     }
   }
