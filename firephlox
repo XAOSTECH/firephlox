@@ -53,6 +53,7 @@ FIREPHLOX_RESTORE_SNAPSHOT=''
 FIREPHLOX_TRIAGE=0
 FIREPHLOX_TRIAGE_SNAPSHOT=''
 FIREPHLOX_REVIVE_SNAPSHOT=''
+FIREPHLOX_ELIMINATE_SNAPSHOT=''
 FIREPHLOX_REVIVE_EXCLUDE=''
 FIREPHLOX_PREFS_ONLY=''
 FIREPHLOX_FRESH=0
@@ -71,6 +72,8 @@ Options:
   -t, --triage         Inspect the active profile for corruption and known-bad configuration.
       --triage=<id>    Triage a specific snap data snapshot instead of the active profile.
       --revive=<id> Dissect a snap data snapshot and transplant its settings.
+      --eliminate=<id> Progressive pref-namespace elimination test – launches Firefox
+                       after each round and waits for user confirmation.
       --fresh       With --revive: cultivate a fresh clone (archive current profile first).
       --exclude=    With --revive: comma-separated list of categories to skip during transplant.
                     Categories: sqlite, credentials, config, extensions, prefs
@@ -108,7 +111,8 @@ parse_args() {
 			--restore=*)    FIREPHLOX_RESTORE=1; FIREPHLOX_RESTORE_SNAPSHOT="${1#*=}" ;;
 			-t|--triage)    FIREPHLOX_TRIAGE=1 ;;
 			--triage=*)     FIREPHLOX_TRIAGE=1; FIREPHLOX_TRIAGE_SNAPSHOT="${1#*=}" ;;
-			--revive=*)     FIREPHLOX_REVIVE_SNAPSHOT="${1#*=}" ;;
+			--revive=*)       FIREPHLOX_REVIVE_SNAPSHOT="${1#*=}" ;;
+			--eliminate=*)    FIREPHLOX_ELIMINATE_SNAPSHOT="${1#*=}" ;;
 			--fresh)        FIREPHLOX_FRESH=1 ;;
 			--exclude=*)    FIREPHLOX_REVIVE_EXCLUDE="${1#*=}" ;;
 			--prefs-only=*) FIREPHLOX_PREFS_ONLY="${1#*=}" ;;
@@ -142,7 +146,7 @@ main() {
 		source "${module}"
 	done
 
-	export FIREPHLOX_DRY_RUN FIREPHLOX_ASSUME_YES FIREPHLOX_SKIP_PURGE FIREPHLOX_SKIP_SHUFFLE FIREPHLOX_SIGN FIREPHLOX_AMO_KEY FIREPHLOX_AMO_SECRET FIREPHLOX_SIGNED_XPI FIREPHLOX_RESTORE FIREPHLOX_RESTORE_SNAPSHOT FIREPHLOX_TRIAGE FIREPHLOX_TRIAGE_SNAPSHOT FIREPHLOX_REVIVE_SNAPSHOT FIREPHLOX_FRESH FIREPHLOX_REVIVE_EXCLUDE FIREPHLOX_PREFS_ONLY
+	export FIREPHLOX_DRY_RUN FIREPHLOX_ASSUME_YES FIREPHLOX_SKIP_PURGE FIREPHLOX_SKIP_SHUFFLE FIREPHLOX_SIGN FIREPHLOX_AMO_KEY FIREPHLOX_AMO_SECRET FIREPHLOX_SIGNED_XPI FIREPHLOX_RESTORE FIREPHLOX_RESTORE_SNAPSHOT FIREPHLOX_TRIAGE FIREPHLOX_TRIAGE_SNAPSHOT FIREPHLOX_REVIVE_SNAPSHOT FIREPHLOX_FRESH FIREPHLOX_REVIVE_EXCLUDE FIREPHLOX_PREFS_ONLY FIREPHLOX_ELIMINATE_SNAPSHOT
 
 	firephlox_banner
 	firephlox_is_dry_run && firephlox_warn 'DRY-RUN mode: no files will be written or deleted.'
@@ -163,6 +167,11 @@ main() {
 
 	if [[ -n "${FIREPHLOX_REVIVE_SNAPSHOT}" ]]; then
 		firephlox_revive
+		return
+	fi
+
+	if [[ -n "${FIREPHLOX_ELIMINATE_SNAPSHOT}" ]]; then
+		firephlox_eliminate
 		return
 	fi
 
