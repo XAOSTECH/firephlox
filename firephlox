@@ -133,6 +133,8 @@ main() {
 	source "${FIREPHLOX_LIB_DIR}/titles.sh"
 	# shellcheck source=lib/common.sh
 	source "${FIREPHLOX_LIB_DIR}/common.sh"
+	# shellcheck source=lib/triage.sh
+	source "${FIREPHLOX_LIB_DIR}/triage.sh"
 
 	local module
 	for module in "${FIREPHLOX_SRC_DIR}"/*.sh; do
