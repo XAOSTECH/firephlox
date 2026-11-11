@@ -56,7 +56,8 @@ firephlox_revive() {
 	[[ -n "${zip_file}" ]] || \
 		firephlox_die "Specimen ${snap_id} not found in the snapd vault. Run: snap saved firefox"
 
-	local zip_size; zip_size="$(du -h "${zip_file}" 2>/dev/null | cut -f1)"
+	local zip_size
+	zip_size="$(firephlox_privileged du -h "${zip_file}" 2>/dev/null | cut -f1 || true)"
 	firephlox_ok "Specimen located (${zip_size}): ${zip_file}"
 
 	local stage_dir tmp_zip
@@ -76,7 +77,7 @@ firephlox_revive() {
 		cp "${zip_file}" "${tmp_zip}"
 	else
 		firephlox_privileged cp "${zip_file}" "${tmp_zip}"
-		chmod 600 "${tmp_zip}" 2>/dev/null || firephlox_privileged chmod 600 "${tmp_zip}"
+		firephlox_privileged chown "$(id -u):$(id -g)" "${tmp_zip}"
 	fi
 
 	python3 - "${tmp_zip}" "${stage_dir}" <<'PYTHON'
