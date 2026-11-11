@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+#
+# firephlox — telemetry surgery for the Snap-confined Firefox browser.
+#
+#   "There's nothing more satisfying than a healthy patient." — Dr. Phlox
+#
+# We operate on the (fire)fox exactly as the good doctor would: precisely and strictly within the writable boundaries of the Snap sandbox.
+#
+#   • System policies (standard Linux path):
+#       /etc/firefox/policies/policies.json          ← documented by Mozilla
+#   • System policies (Ubuntu snap supplementary path):
+#       /var/snap/firefox/common/distribution/policies.json
+#   • User profiles: ~/snap/firefox/common/.mozilla/firefox/
+#
+# Source: https://firefox-admin-docs.mozilla.org/guides/policies-configuration/
+# The read-only /snap/firefox/current tree and AppArmor profiles are never touched.
+
+set -euo pipefail
+
+FIREPHLOX_ROOT="$(realpath -- "$(dirname -- "${BASH_SOURCE[0]}")")"
+readonly FIREPHLOX_ROOT
+readonly FIREPHLOX_LIB_DIR="${FIREPHLOX_ROOT}/lib"
+readonly FIREPHLOX_SRC_DIR="${FIREPHLOX_ROOT}/src"
+
+# --- Path map -----------------------------------------------------------
+# All base paths honour environment overrides so the tool can be tested against a sandbox without touching the live system.
+#
+# Primary policy path (documented by Mozilla for all Linux distributions):
+readonly FIREPHLOX_ETC_POLICIES_DIR="${FIREPHLOX_ETC_POLICIES_DIR:-/etc/firefox/policies}"
+readonly FIREPHLOX_ETC_POLICIES_FILE="${FIREPHLOX_ETC_POLICIES_DIR}/policies.json"
+#
+# Supplementary path used by the Ubuntu Snap packaging of Firefox.
+# Not documented by Mozilla; present because Canonical's snap recipe configures Firefox to also search this location.
+readonly FIREPHLOX_SNAP_VAR="${FIREPHLOX_SNAP_VAR:-/var/snap/firefox}"
+readonly FIREPHLOX_SNAP_COMMON="${FIREPHLOX_SNAP_VAR}/common"
+readonly FIREPHLOX_DISTRIBUTION_DIR="${FIREPHLOX_SNAP_COMMON}/distribution"
+readonly FIREPHLOX_SNAP_POLICIES_FILE="${FIREPHLOX_DISTRIBUTION_DIR}/policies.json"
+#
+# NOTE: mozilla.cfg / autoconfig.js are NOT written.
+# The snap's defaults/pref/ lives under read-only /snap/firefox/current/;
+# placing an autoconfig pointer in /var/snap/firefox/common/defaults/pref/ has no effect because Firefox never reads from that location.
+#
+readonly FIREPHLOX_USER_PROFILES_DIR="${FIREPHLOX_USER_PROFILES_DIR:-${HOME}/snap/firefox/common/.mozilla/firefox}"
+
+# --- Runtime flags -------------------------------------------------------
+FIREPHLOX_DRY_RUN=0
+FIREPHLOX_ASSUME_YES=0
+FIREPHLOX_SKIP_PURGE=0
+FIREPHLOX_SKIP_SHUFFLE=0
+FIREPHLOX_SIGN=0
+FIREPHLOX_RESTORE=0
+
+usage() {
+	cat <<'USAGE'
+firephlox — neutralise Firefox telemetry inside the Snap sandbox.
+
+Usage: firephlox [options]
+
+Options:
+  -n, --dry-run     Show every action without writing or deleting anything.
+  -y, --yes         Assume "yes" for the cache-purge confirmation.
+  -r, --restore     Undo all firephlox changes and return Firefox to its default state.
+      --no-purge    Skip Task 3 (cache/telemetry purge) entirely.
+      --no-shuffle  Skip Task 4 (True Shuffle extension deployment).
+      --sign        Sign the extension via Mozilla AMO (Task 5). Required once
+                   for Firefox Release. Get credentials at addons.mozilla.org.
+      --amo-key=    AMO API Key  (or set FIREPHLOX_AMO_KEY env var).
+      --amo-secret= AMO API Secret (or set FIREPHLOX_AMO_SECRET env var).
+  -h, --help        Show this help and exit.
+
+Tasks performed:
+  1. Write policies.json to /etc/firefox/policies/ (documented Mozilla path)
+     and /var/snap/firefox/common/distribution/ (Ubuntu snap supplement).
+  2. Harden the active profile via a managed user.js block.
+  3. Safely purge datareporting, saved-telemetry-pings and crashes caches.
+  4. Deploy Apple Music True Shuffle as a native, self-contained WebExtension
+     via enterprise ExtensionSettings — no userscript manager required.
+  5. (Optional, --sign) Sign the extension via AMO so Firefox Release will load
+     it. Only needed once; the signed XPI is cached in ~/.cache/firephlox/.
+USAGE
+}
+
+parse_args() {
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+			-n|--dry-run)   FIREPHLOX_DRY_RUN=1 ;;
+			-y|--yes)       FIREPHLOX_ASSUME_YES=1 ;;
+			-r|--restore)   FIREPHLOX_RESTORE=1 ;;
+			--no-purge)     FIREPHLOX_SKIP_PURGE=1 ;;
+			--no-shuffle)   FIREPHLOX_SKIP_SHUFFLE=1 ;;
+			--sign)         FIREPHLOX_SIGN=1 ;;
+			--amo-key=*)    FIREPHLOX_AMO_KEY="${1#*=}" ;;
+			--amo-secret=*) FIREPHLOX_AMO_SECRET="${1#*=}" ;;
+			-h|--help)      usage; exit 0 ;;
+			*) printf 'Unknown option: %s\n\n' "$1" >&2; usage; exit 2 ;;
+		esac
+		shift
+	done
+}
+
+main() {
+	parse_args "$@"
+
+	# shellcheck source=lib/colours.sh
+	source "${FIREPHLOX_LIB_DIR}/colours.sh"
+	# shellcheck source=lib/titles.sh
+	source "${FIREPHLOX_LIB_DIR}/titles.sh"
+	# shellcheck source=lib/common.sh
+	source "${FIREPHLOX_LIB_DIR}/common.sh"
+
+	local module
+	for module in "${FIREPHLOX_SRC_DIR}"/*.sh; do
+		# shellcheck source=/dev/null
+		source "${module}"
+	done
+
+	export FIREPHLOX_DRY_RUN FIREPHLOX_ASSUME_YES FIREPHLOX_SKIP_PURGE FIREPHLOX_SKIP_SHUFFLE FIREPHLOX_SIGN FIREPHLOX_AMO_KEY FIREPHLOX_AMO_SECRET FIREPHLOX_SIGNED_XPI FIREPHLOX_RESTORE
+
+	firephlox_banner
+	firephlox_is_dry_run && firephlox_warn 'DRY-RUN mode: no files will be written or deleted.'
+
+	if [[ "${FIREPHLOX_RESTORE}" == '1' ]]; then
+		firephlox_restore
+		return
+	fi
+
+	firephlox_run_prereqs
+	firephlox_apply_policies
+	firephlox_apply_userjs
+	firephlox_purge_caches
+	firephlox_sign_amo
+	firephlox_deploy_shuffle
+	firephlox_verify
+
+	printf '\n'
+	firephlox_ok 'Operation complete. The patient is stable.'
+}
+
+main "$@"
