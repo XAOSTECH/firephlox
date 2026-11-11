@@ -80,19 +80,49 @@ firephlox_revive() {
 		firephlox_privileged chown "$(id -u):$(id -g)" "${tmp_zip}"
 	fi
 
+	# Peek at the internal ZIP layout so we can diagnose extraction issues.
+	firephlox_info 'Inspecting specimen structure…'
 	python3 - "${tmp_zip}" "${stage_dir}" <<'PYTHON'
-import sys, zipfile
-with zipfile.ZipFile(sys.argv[1], 'r') as z:
-    z.extractall(sys.argv[2])
+import sys, os, zipfile, tarfile
+
+tmp_zip, stage_dir = sys.argv[1], sys.argv[2]
+
+with zipfile.ZipFile(tmp_zip, 'r') as z:
+    names = z.namelist()
+    # Print the first 12 entries for diagnostics (goes to stdout → captured by caller).
+    for n in names[:12]:
+        print(f'  zip: {n}', flush=True)
+    z.extractall(stage_dir)
+
+# Snap snapshots store per-user data as tar archives inside the outer ZIP.
+# Walk the extracted tree and unpack any .tar files found.
+for root, _dirs, files in os.walk(stage_dir):
+    for fname in files:
+        if not fname.endswith('.tar'):
+            continue
+        tar_path = os.path.join(root, fname)
+        extract_to = os.path.splitext(tar_path)[0]
+        os.makedirs(extract_to, exist_ok=True)
+        try:
+            with tarfile.open(tar_path, 'r') as t:
+                t.extractall(extract_to)
+        except Exception as e:
+            print(f'  warn: could not unpack {tar_path}: {e}', flush=True)
 PYTHON
 	rm -f "${tmp_zip}"
-	firephlox_ok 'Specimen staged.'
+	# Ensure the current user can traverse all extracted directories.
+	chmod -R u+rX "${stage_dir}" 2>/dev/null || true
+	firephlox_ok 'Specimen staged and unpacked.'
 
 	# Locate the Firefox profile inside the extracted snapshot.
 	local src_perms
 	src_perms="$(_fp_revive_find_in_stage "${stage_dir}" 'permissions.sqlite')"
-	[[ -n "${src_perms}" ]] || \
-		firephlox_die 'Could not locate a Firefox profile inside this specimen. Is it a Firefox snapshot?'
+	if [[ -z "${src_perms}" ]]; then
+		firephlox_warn 'Could not find permissions.sqlite — first 10 paths in staged specimen:'
+		find "${stage_dir}" -maxdepth 5 2>/dev/null | head -10 | \
+			while IFS= read -r p; do firephlox_info "  ${p#"${stage_dir}"/}"; done || true
+		firephlox_die 'Could not locate a Firefox profile inside this specimen.'
+	fi
 
 	local src_profile; src_profile="$(dirname "${src_perms}")"
 	firephlox_ok "Firefox profile located in specimen: $(basename "${src_profile}")"
