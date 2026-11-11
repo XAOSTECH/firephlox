@@ -4,31 +4,44 @@
 #   "Before I can treat the patient, I need to know what I'm dealing with."
 #       — Dr. Phlox
 #
-# A complete diagnostic cycle over the active Firefox profile. Never writes,
-# deletes or modifies anything. Snapshots are never touched.
+# Without a snapshot ID: inspects the active Firefox profile.
+# With --triage=<id>:    stages the named snap data snapshot and triages it.
 #
 # Shared helpers (_fp_triage_sqlite_check, _fp_triage_pref) are also called
 # by 10_revive.sh, which is sourced after this module.
 
 firephlox_triage() {
-	firephlox_section 'Triage · Initiating diagnostic cycle'
+	local snap_id="${FIREPHLOX_TRIAGE_SNAPSHOT:-}"
+	local profile
 
-	if firephlox_firefox_running; then
-		firephlox_die 'Firefox is currently running. The patient must be sedated (closed) before examination.'
+	if [[ -n "${snap_id}" ]]; then
+		# Snapshot triage – stage the specimen first.
+		firephlox_section "Triage · Staging specimen ${snap_id} for examination"
+		if firephlox_firefox_running; then
+			firephlox_die 'Firefox is currently running. Close it before triaging a snapshot.'
+		fi
+		local stage_dir; stage_dir="$(mktemp -d)"
+		# shellcheck disable=SC2064
+		trap "rm -rf -- '${stage_dir}'" RETURN EXIT
+		_fp_stage_snapshot "${snap_id}" "${stage_dir}"
+		profile="${_FP_STAGED_PROFILE}"
+	else
+		# Active-profile triage.
+		firephlox_section 'Triage · Initiating diagnostic cycle'
+		if firephlox_firefox_running; then
+			firephlox_die 'Firefox is currently running. The patient must be sedated (closed) before examination.'
+		fi
+		local -a profiles
+		mapfile -t profiles < <(firephlox_discover_profiles)
+		[[ ${#profiles[@]} -gt 0 ]] || \
+			firephlox_die 'No profiles found. Has the patient passed consultation (Firefox launched) at least once?'
+		profile="$(
+			for p in "${profiles[@]}"; do
+				printf '%s %s\n' "$(stat -c '%Y' "${p}" 2>/dev/null || printf '0')" "${p}"
+			done | sort -rn | head -1 | cut -d' ' -f2-
+		)"
 	fi
 
-	local -a profiles
-	mapfile -t profiles < <(firephlox_discover_profiles)
-	[[ ${#profiles[@]} -gt 0 ]] || \
-		firephlox_die 'No profiles found. Has the patient passed consultation (Firefox launched) at least once?'
-
-	# Most recently modified profile is the primary patient.
-	local profile
-	profile="$(
-		for p in "${profiles[@]}"; do
-			printf '%s %s\n' "$(stat -c '%Y' "${p}" 2>/dev/null || printf '0')" "${p}"
-		done | sort -rn | head -1 | cut -d' ' -f2-
-	)"
 	firephlox_info "Patient: ${profile}"
 	printf '\n'
 
@@ -41,8 +54,12 @@ firephlox_triage() {
 		snap_ver="$(snap list firefox 2>/dev/null | awk 'NR==2{print $2}')"
 		firephlox_ok  "Profile last seen by: Firefox ${last_ver}"
 		[[ -n "${snap_ver}" ]] && firephlox_info "Current snap version:  Firefox ${snap_ver}"
-		if [[ -n "${snap_ver}" && "${last_ver%%.*}" != "${snap_ver%%.*}" ]]; then
-			firephlox_warn "Major version mismatch — profile was last written by ${last_ver}, snap is ${snap_ver}. A failed first-launch migration may have caused the presenting symptoms."
+		# Compare only the major version number (strip build suffix).
+		local lv_major sv_major
+		lv_major="${last_ver%%[._]*}"
+		sv_major="${snap_ver%%[._-]*}"
+		if [[ -n "${sv_major}" && "${lv_major}" != "${sv_major}" ]]; then
+			firephlox_warn "Major version mismatch – profile last written by ${last_ver}, snap is ${snap_ver}. A failed first-launch migration may have caused the presenting symptoms."
 		fi
 	else
 		firephlox_warn 'compatibility.ini absent — profile has never been activated or was excised.'

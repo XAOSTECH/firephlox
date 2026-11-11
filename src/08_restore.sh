@@ -114,6 +114,69 @@ firephlox_restore() {
 	firephlox_info 'Restart Firefox to apply the restored state.'
 }
 
+# firephlox_restore_specimen – run restore cleanup on a staged snapshot.
+# Used by --restore=<id>: stages specimen <id> and reports which
+# firephlox-managed pref values are present in its prefs.js.
+firephlox_restore_specimen() {
+	local snap_id="${FIREPHLOX_RESTORE_SNAPSHOT}"
+	firephlox_section "Restore · Inspecting specimen ${snap_id} for firephlox remnants"
+
+	if firephlox_firefox_running; then
+		firephlox_die 'Firefox is currently running. Close it before inspecting a snapshot.'
+	fi
+
+	local stage_dir; stage_dir="$(mktemp -d)"
+	# shellcheck disable=SC2064
+	trap "rm -rf -- '${stage_dir}'" RETURN EXIT
+	_fp_stage_snapshot "${snap_id}" "${stage_dir}"
+
+	local staged_prefs="${_FP_STAGED_PROFILE}/prefs.js"
+	if [[ ! -f "${staged_prefs}" ]]; then
+		firephlox_warn 'No prefs.js found in this specimen.'
+		return 0
+	fi
+
+	firephlox_section 'Restore · Firephlox-managed pref values present in specimen'
+	_fp_restore_report_managed_prefs "${staged_prefs}"
+	firephlox_info 'Run --revive=<id> to transplant from this specimen; managed values are scrubbed automatically during pref transplant.'
+}
+
+# Reports which firephlox-managed pref values are present in a prefs.js.
+# Used both by firephlox_restore_specimen and firephlox_restore (active profile).
+_fp_restore_report_managed_prefs() {
+	local prefs_file="$1"
+	python3 - "${prefs_file}" <<'PYTHON'
+import re, sys
+MANAGED = {
+    'toolkit.telemetry.cachedClientID':                      '"00000000-0000-0000-0000-000000000000"',
+    'browser.newtabpage.activity-stream.impressionId':        '"{}"',
+    'toolkit.telemetry.server':                               '"http://127.0.0.1"',
+    'toolkit.telemetry.unified':                              'false',
+    'datareporting.policy.dataSubmissionPolicyAcceptedVersion': '0',
+    'datareporting.healthreport.uploadEnabled':               'false',
+    'datareporting.usage.uploadEnabled':                      'false',
+    'xpinstall.signatures.required':                          'false',
+    'layers.acceleration.disabled':                           'false',
+}
+pref_re = re.compile(r'^user_pref\("([^"]+)",\s*(.*)\);')
+found = []
+with open(sys.argv[1]) as f:
+    for line in f:
+        m = pref_re.match(line.strip())
+        if m and m.group(1) in MANAGED and m.group(2) == MANAGED[m.group(1)]:
+            found.append(m.group(1))
+if found:
+    for k in found:
+        print(f'  remnant: {k}')
+    sys.exit(1)
+sys.exit(0)
+PYTHON
+	local rc=$?
+	if [[ "${rc}" -eq 0 ]]; then
+		firephlox_ok 'No firephlox-managed remnant values detected in prefs.js.'
+	fi
+}
+
 _fp_restore_rm() {
 	local path="$1"
 	if [[ ! -e "${path}" ]]; then
