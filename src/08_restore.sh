@@ -108,6 +108,59 @@ firephlox_restore() {
 		fi
 	fi
 
+	# --- Restore 6: Scrub firephlox-managed pref values from prefs.js ---
+	firephlox_section 'Restore 6 · Scrubbing firephlox-managed pref values'
+
+	local profile
+	for profile in "${profiles[@]}"; do
+		local prefs="${profile}/prefs.js"
+		[[ -f "${prefs}" ]] || { firephlox_info "No prefs.js in ${profile}"; continue; }
+		if firephlox_is_dry_run; then
+			firephlox_info "(dry-run) would scrub managed pref values from ${prefs}"
+			continue
+		fi
+		local scrubbed
+		scrubbed="$(python3 - "${prefs}" <<'PYTHON'
+import re, sys, os, shutil
+
+MANAGED = {
+    'toolkit.telemetry.cachedClientID':                      '"00000000-0000-0000-0000-000000000000"',
+    'browser.newtabpage.activity-stream.impressionId':        '"{}"',
+    'toolkit.telemetry.server':                               '"http://127.0.0.1"',
+    'toolkit.telemetry.unified':                              'false',
+    'datareporting.policy.dataSubmissionPolicyAcceptedVersion': '0',
+    'datareporting.healthreport.uploadEnabled':               'false',
+    'datareporting.usage.uploadEnabled':                      'false',
+    'xpinstall.signatures.required':                          'false',
+    'layers.acceleration.disabled':                           'false',
+}
+pref_re = re.compile(r'^user_pref\("([^"]+)",\s*(.*)\);')
+kept, removed = [], []
+with open(sys.argv[1]) as f:
+    for line in f:
+        m = pref_re.match(line.strip())
+        if m and m.group(1) in MANAGED and m.group(2) == MANAGED[m.group(1)]:
+            removed.append(m.group(1))
+        else:
+            kept.append(line)
+
+tmp = sys.argv[1] + '.tmp'
+with open(tmp, 'w') as f:
+    f.writelines(kept)
+os.replace(tmp, sys.argv[1])
+for k in removed:
+    print(k)
+PYTHON
+)"
+		if [[ -n "${scrubbed}" ]]; then
+			printf '%s\n' "${scrubbed}" | while IFS= read -r key; do
+				firephlox_ok "Scrubbed managed remnant: ${key}"
+			done
+		else
+			firephlox_info "No managed remnants in ${prefs}"
+		fi
+	done
+
 	printf '\n'
 	firephlox_ok 'Restore complete. Firefox has been returned to its default state.'
 	firephlox_info 'Note: purged telemetry caches (Task 3) are recreated by Firefox on the next launch.'

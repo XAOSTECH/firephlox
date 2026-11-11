@@ -485,13 +485,25 @@ EXCLUDED_PREFIXES = (
     'services.sync.',
     'media.hardware-video-decoding',
     'media.ffmpeg.vaapi',
+    'media.gmp-',
     'layers.acceleration.disabled',
     'xpinstall.signatures.required',
     'toolkit.startup.',
+    'distribution.',
+    'identity.fxaccounts.account.device.',
 )
 EXCLUDED_EXACT = frozenset({
     'privacy.resistFingerprinting',
 })
+# Firephlox-locked values – zeroed UUIDs, redirected servers, etc.
+# Never transplant these; they would re-lock values in the destination
+# and require another restore cycle to undo.
+FIREPHLOX_LOCKED = {
+    'toolkit.telemetry.cachedClientID':                       '"00000000-0000-0000-0000-000000000000"',
+    'browser.newtabpage.activity-stream.impressionId':         '"{}"',
+    'toolkit.telemetry.server':                                '"http://127.0.0.1"',
+    'toolkit.telemetry.unified':                               'false',
+}
 # Skip values that contain filesystem paths — they are profile-specific.
 PATH_RE = re.compile(r'["\x27](?:/home/|file://|/snap/|/tmp/|/root/)')
 PREF_RE = re.compile(r'^user_pref\("([^"]+)",\s*(.*)\);')
@@ -507,6 +519,8 @@ with open(src) as f:
             continue
         if key in EXCLUDED_EXACT:
             continue
+        if key in FIREPHLOX_LOCKED and val == FIREPHLOX_LOCKED[key]:
+            continue  # zeroed/redirected by firephlox policy – let Firefox regenerate
         if PATH_RE.search(val):
             continue
         lines.append(f'user_pref("{key}", {val});')
