@@ -89,25 +89,29 @@ tmp_zip, stage_dir = sys.argv[1], sys.argv[2]
 
 with zipfile.ZipFile(tmp_zip, 'r') as z:
     names = z.namelist()
-    # Print the first 12 entries for diagnostics (goes to stdout → captured by caller).
     for n in names[:12]:
         print(f'  zip: {n}', flush=True)
     z.extractall(stage_dir)
 
-# Snap snapshots store per-user data as tar archives inside the outer ZIP.
-# Walk the extracted tree and unpack any .tar files found.
+# Snap snapshots wrap user data in compressed tarballs (.tgz / .tar.gz / .tar)
+# inside the outer ZIP. Walk the extracted tree and unpack every archive found.
+def unpack(tar_path):
+    base = tar_path
+    for ext in ('.tar.gz', '.tgz', '.tar'):
+        if base.endswith(ext):
+            base = base[:-len(ext)]
+            break
+    os.makedirs(base, exist_ok=True)
+    try:
+        with tarfile.open(tar_path, 'r:*') as t:
+            t.extractall(base)
+    except Exception as e:
+        print(f'  warn: could not unpack {os.path.basename(tar_path)}: {e}', flush=True)
+
 for root, _dirs, files in os.walk(stage_dir):
-    for fname in files:
-        if not fname.endswith('.tar'):
-            continue
-        tar_path = os.path.join(root, fname)
-        extract_to = os.path.splitext(tar_path)[0]
-        os.makedirs(extract_to, exist_ok=True)
-        try:
-            with tarfile.open(tar_path, 'r') as t:
-                t.extractall(extract_to)
-        except Exception as e:
-            print(f'  warn: could not unpack {tar_path}: {e}', flush=True)
+    for fname in sorted(files):
+        if any(fname.endswith(ext) for ext in ('.tar.gz', '.tgz', '.tar')):
+            unpack(os.path.join(root, fname))
 PYTHON
 	rm -f "${tmp_zip}"
 	# Ensure the current user can traverse all extracted directories.
