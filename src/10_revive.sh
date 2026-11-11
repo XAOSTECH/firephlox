@@ -83,7 +83,8 @@ firephlox_revive() {
 	# Peek at the internal ZIP layout so we can diagnose extraction issues.
 	firephlox_info 'Inspecting specimen structure…'
 	python3 - "${tmp_zip}" "${stage_dir}" <<'PYTHON'
-import sys, os, zipfile, tarfile
+import sys, os, zipfile, tarfile, warnings
+warnings.filterwarnings('ignore')  # suppress Python 3.12+ tarfile DeprecationWarnings
 
 tmp_zip, stage_dir = sys.argv[1], sys.argv[2]
 
@@ -93,8 +94,6 @@ with zipfile.ZipFile(tmp_zip, 'r') as z:
         print(f'  zip: {n}', flush=True)
     z.extractall(stage_dir)
 
-# Snap snapshots wrap user data in compressed tarballs (.tgz / .tar.gz / .tar)
-# inside the outer ZIP. Walk the extracted tree and unpack every archive found.
 def unpack(tar_path):
     base = tar_path
     for ext in ('.tar.gz', '.tgz', '.tar'):
@@ -102,11 +101,24 @@ def unpack(tar_path):
             base = base[:-len(ext)]
             break
     os.makedirs(base, exist_ok=True)
+    skipped = 0
     try:
         with tarfile.open(tar_path, 'r:*') as t:
-            t.extractall(base)
+            for member in t.getmembers():
+                # Symlinks pointing to absolute paths cannot be safely extracted
+                # and are irrelevant for settings recovery — skip them.
+                if (member.issym() or member.islnk()) and os.path.isabs(member.linkname):
+                    skipped += 1
+                    continue
+                try:
+                    t.extract(member, base)
+                except Exception:
+                    skipped += 1
     except Exception as e:
-        print(f'  warn: could not unpack {os.path.basename(tar_path)}: {e}', flush=True)
+        print(f'  warn: cannot read {os.path.basename(tar_path)}: {e}', flush=True)
+        return
+    if skipped:
+        print(f'  info: {os.path.basename(tar_path)}: {skipped} unsafe symlink(s) skipped', flush=True)
 
 for root, _dirs, files in os.walk(stage_dir):
     for fname in sorted(files):
