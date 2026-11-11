@@ -265,86 +265,107 @@ PYTHON
 	# --- Revive 4: Surgical transplant -----------------------------------
 	firephlox_section 'Revive 4 · Surgical transplant'
 
+	[[ -n "${FIREPHLOX_REVIVE_EXCLUDE:-}" ]] && \
+		firephlox_warn "Excluded from transplant: ${FIREPHLOX_REVIVE_EXCLUDE}"
+
 	# 3A — SQLite databases
-	firephlox_info 'Cellular databases…'
-	_fp_revive_xplant_sqlite "${src_profile}/permissions.sqlite" "${dst_profile}/permissions.sqlite" \
-		'Site permissions'
-	_fp_revive_xplant_sqlite "${src_profile}/cookies.sqlite" "${dst_profile}/cookies.sqlite" \
-		'Immunological memory (cookies)'
-	_fp_revive_xplant_sqlite "${src_profile}/places.sqlite" "${dst_profile}/places.sqlite" \
-		'Patient history (bookmarks and navigation)'
-	_fp_revive_xplant_sqlite "${src_profile}/formhistory.sqlite" "${dst_profile}/formhistory.sqlite" \
-		'Autofill tissue samples'
-	_fp_revive_xplant_sqlite "${src_profile}/favicons.sqlite" "${dst_profile}/favicons.sqlite" \
-		'Iconographic registry'
-	_fp_revive_xplant_sqlite "${src_profile}/cert9.db" "${dst_profile}/cert9.db" \
-		'Certificate trust matrix'
+	if ! _fp_revive_excluded 'sqlite'; then
+		firephlox_info 'Cellular databases…'
+		_fp_revive_xplant_sqlite "${src_profile}/permissions.sqlite" "${dst_profile}/permissions.sqlite" \
+			'Site permissions'
+		_fp_revive_xplant_sqlite "${src_profile}/cookies.sqlite" "${dst_profile}/cookies.sqlite" \
+			'Immunological memory (cookies)'
+		_fp_revive_xplant_sqlite "${src_profile}/places.sqlite" "${dst_profile}/places.sqlite" \
+			'Patient history (bookmarks and navigation)'
+		_fp_revive_xplant_sqlite "${src_profile}/formhistory.sqlite" "${dst_profile}/formhistory.sqlite" \
+			'Autofill tissue samples'
+		_fp_revive_xplant_sqlite "${src_profile}/favicons.sqlite" "${dst_profile}/favicons.sqlite" \
+			'Iconographic registry'
+		_fp_revive_xplant_sqlite "${src_profile}/cert9.db" "${dst_profile}/cert9.db" \
+			'Certificate trust matrix'
+	else
+		firephlox_info 'Cellular databases — excluded'
+	fi
 
 	# 3B — Credential pair (must travel together)
-	if [[ "${has_credentials}" == 'yes' ]]; then
-		firephlox_info 'Credential pair…'
-		_fp_revive_xplant_file "${src_profile}/logins.json" "${dst_profile}/logins.json" \
-			'Credentials archive (logins.json)'
-		_fp_revive_xplant_file "${src_profile}/key4.db" "${dst_profile}/key4.db" \
-			'Encryption matrix (key4.db)'
+	if ! _fp_revive_excluded 'credentials'; then
+		if [[ "${has_credentials}" == 'yes' ]]; then
+			firephlox_info 'Credential pair…'
+			_fp_revive_xplant_file "${src_profile}/logins.json" "${dst_profile}/logins.json" \
+				'Credentials archive (logins.json)'
+			_fp_revive_xplant_file "${src_profile}/key4.db" "${dst_profile}/key4.db" \
+				'Encryption matrix (key4.db)'
+		fi
+	else
+		firephlox_info 'Credential pair — excluded'
 	fi
 
 	# 3C — Configuration files
-	firephlox_info 'Configuration files…'
-	_fp_revive_xplant_file "${src_profile}/containers.json" \
-		"${dst_profile}/containers.json" 'Containment protocols'
-	_fp_revive_xplant_file "${src_profile}/search.json.mozlz4" \
-		"${dst_profile}/search.json.mozlz4" 'Sensor array (search engines)'
-	_fp_revive_xplant_file "${src_profile}/extension-preferences.json" \
-		"${dst_profile}/extension-preferences.json" 'Implant preference matrix'
-	_fp_revive_xplant_file "${src_profile}/extension-settings.json" \
-		"${dst_profile}/extension-settings.json" 'Implant settings database'
-	_fp_revive_xplant_file "${src_profile}/extensions.json" \
-		"${dst_profile}/extensions.json" 'Implant registry'
-
-	# 3D — Extension XPI files (excluding firephlox's own implant)
-	if [[ "${xpi_count}" -gt 0 ]]; then
-		firephlox_info 'Extension files…'
-		local xpi xpi_name
-		for xpi in "${src_profile}/extensions/"*.xpi; do
-			[[ -f "${xpi}" ]] || continue
-			xpi_name="$(basename "${xpi}")"
-			if [[ "${xpi_name}" == 'apple-music-shuffle@firephlox.xpi' ]]; then
-				firephlox_info "Quarantined own implant: ${xpi_name}"
-				continue
-			fi
-			_fp_revive_xplant_file "${xpi}" "${dst_profile}/extensions/${xpi_name}" \
-				"Extension: ${xpi_name}"
-		done
+	if ! _fp_revive_excluded 'config'; then
+		firephlox_info 'Configuration files…'
+		_fp_revive_xplant_file "${src_profile}/containers.json" \
+			"${dst_profile}/containers.json" 'Containment protocols'
+		_fp_revive_xplant_file "${src_profile}/search.json.mozlz4" \
+			"${dst_profile}/search.json.mozlz4" 'Sensor array (search engines)'
+		_fp_revive_xplant_file "${src_profile}/extension-preferences.json" \
+			"${dst_profile}/extension-preferences.json" 'Implant preference matrix'
+		_fp_revive_xplant_file "${src_profile}/extension-settings.json" \
+			"${dst_profile}/extension-settings.json" 'Implant settings database'
+		_fp_revive_xplant_file "${src_profile}/extensions.json" \
+			"${dst_profile}/extensions.json" 'Implant registry'
+	else
+		firephlox_info 'Configuration files — excluded'
 	fi
 
-	# 3E — Extension synaptic relay storage (IndexedDB)
-	if [[ "${ext_storage_count}" -gt 0 ]]; then
-		firephlox_info 'Synaptic relay storage (extension data, uBlock rules, etc.)…'
-		local dst_storage="${dst_profile}/storage/default"
-		mkdir -p "${dst_storage}"
-		local d dname
-		for d in "${src_storage}"/moz-extension+++*/; do
-			[[ -d "${d}" ]] || continue
-			dname="$(basename "${d}")"
-			if [[ "${dname}" == *'apple-music-shuffle'* || "${dname}" == *'firephlox'* ]]; then
-				firephlox_info "Quarantined own synaptic node: ${dname}"
-				continue
-			fi
-			cp -r "${d}" "${dst_storage}/"
-			firephlox_ok "Synaptic relay → ${dname}"
-		done
-		# Legacy storage path.
-		if [[ -d "${src_profile}/browser-extension-data" ]]; then
-			cp -r "${src_profile}/browser-extension-data" "${dst_profile}/"
-			firephlox_ok 'Legacy relay storage → transplanted'
+	# 3D/E — Extension XPI files, registry and synaptic relay storage
+	if ! _fp_revive_excluded 'extensions'; then
+		if [[ "${xpi_count}" -gt 0 ]]; then
+			firephlox_info 'Extension files…'
+			local xpi xpi_name
+			for xpi in "${src_profile}/extensions/"*.xpi; do
+				[[ -f "${xpi}" ]] || continue
+				xpi_name="$(basename "${xpi}")"
+				if [[ "${xpi_name}" == 'apple-music-shuffle@firephlox.xpi' ]]; then
+					firephlox_info "Quarantined own implant: ${xpi_name}"
+					continue
+				fi
+				_fp_revive_xplant_file "${xpi}" "${dst_profile}/extensions/${xpi_name}" \
+					"Extension: ${xpi_name}"
+			done
 		fi
+
+		if [[ "${ext_storage_count}" -gt 0 ]]; then
+			firephlox_info 'Synaptic relay storage (extension data, uBlock rules, etc.)…'
+			local dst_storage="${dst_profile}/storage/default"
+			mkdir -p "${dst_storage}"
+			local d dname
+			for d in "${src_storage}"/moz-extension+++*/; do
+				[[ -d "${d}" ]] || continue
+				dname="$(basename "${d}")"
+				if [[ "${dname}" == *'apple-music-shuffle'* || "${dname}" == *'firephlox'* ]]; then
+					firephlox_info "Quarantined own synaptic node: ${dname}"
+					continue
+				fi
+				cp -r "${d}" "${dst_storage}/"
+				firephlox_ok "Synaptic relay → ${dname}"
+			done
+			if [[ -d "${src_profile}/browser-extension-data" ]]; then
+				cp -r "${src_profile}/browser-extension-data" "${dst_profile}/"
+				firephlox_ok 'Legacy relay storage → transplanted'
+			fi
+		fi
+	else
+		firephlox_info 'Extension files and synaptic relay storage — excluded'
 	fi
 
 	# 3F — Neural pathway configuration (selected prefs → user.js)
-	if [[ "${has_prefs}" == 'yes' ]]; then
-		firephlox_info 'Neural pathway configuration (preferences)…'
-		_fp_revive_xplant_prefs "${src_profile}/prefs.js" "${dst_profile}/user.js"
+	if ! _fp_revive_excluded 'prefs'; then
+		if [[ "${has_prefs}" == 'yes' ]]; then
+			firephlox_info 'Neural pathway configuration (preferences)…'
+			_fp_revive_xplant_prefs "${src_profile}/prefs.js" "${dst_profile}/user.js"
+		fi
+	else
+		firephlox_info 'Neural pathway configuration — excluded'
 	fi
 
 	printf '\n'
@@ -352,6 +373,16 @@ PYTHON
 	firephlox_info 'The source specimen was not disturbed.'
 	firephlox_info 'Remove user.js from the profile to revert transplanted preferences if issues arise.'
 	firephlox_info 'Restart Firefox to begin recovery.'
+}
+
+# Returns 0 (true) when the given category is listed in FIREPHLOX_REVIVE_EXCLUDE.
+_fp_revive_excluded() {
+	local category="$1" c
+	local IFS=','
+	for c in ${FIREPHLOX_REVIVE_EXCLUDE:-}; do
+		[[ "${c}" == "${category}" ]] && return 0
+	done
+	return 1
 }
 
 # Archives the current profile and leaves the directory empty in place.
