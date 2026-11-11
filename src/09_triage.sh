@@ -220,6 +220,48 @@ print(len(json.load(open('${ext_json}')).get('addons', [])))
 	firephlox_ok 'Diagnostic cycle complete. The patient has my full attention.'
 	firephlox_info 'To salvage settings from a snapshot: ./firephlox --revive=<snapshot-id>'
 	firephlox_info 'Run: snap saved firefox  to list available specimens.'
+
+	# When triaging a snapshot, write a findings file so revive can
+	# automatically apply any exclusion recommendations.
+	if [[ -n "${snap_id}" ]]; then
+		_fp_triage_write_findings "${snap_id}" "${profile}"
+	fi
+}
+
+# Writes a findings file to ~/.cache/firephlox/triage-<id>.findings.
+# Format: one directive per line – warn:message or recommend-exclude:category.
+# Used by firephlox_revive to surface warnings and suggested exclusions.
+_fp_triage_write_findings() {
+	local snap_id="$1" profile="$2"
+	local findings_dir="${HOME}/.cache/firephlox"
+	local findings_file="${findings_dir}/triage-${snap_id}.findings"
+	mkdir -p "${findings_dir}"
+	: > "${findings_file}"
+
+	# prefs.js syntax damage
+	local prefs="${profile}/prefs.js"
+	if [[ -f "${prefs}" ]]; then
+		local syntax_ok
+		syntax_ok="$(python3 - "${prefs}" <<'PYTHON' 2>/dev/null || printf 'damaged'
+import re, sys
+pref_re = re.compile(r'^user_pref\("[^"]+",\s*.+\);$')
+for raw in open(sys.argv[1]):
+    line = raw.rstrip('\n')
+    if line and not line.startswith('//') and not line.startswith('/*') and not line.startswith(' *'):
+        if not pref_re.match(line):
+            sys.exit(1)
+print('ok')
+PYTHON
+)"
+		if [[ "${syntax_ok}" != 'ok' ]]; then
+			printf 'warn:prefs.js contains malformed lines (partial write suspected)\n' \
+				>> "${findings_file}"
+			printf 'recommend-exclude:prefs\n' >> "${findings_file}"
+		fi
+	fi
+
+	firephlox_ok "Findings written: ${findings_file}"
+	firephlox_info 'Run --revive='"${snap_id}"' — revive will apply any recommendations automatically.'
 }
 
 # Returns "ok" or an error/corruption description for a SQLite database.

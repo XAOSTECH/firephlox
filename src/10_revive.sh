@@ -66,6 +66,26 @@ firephlox_revive() {
 	_fp_stage_snapshot "${snap_id}" "${stage_dir}"
 	local src_profile="${_FP_STAGED_PROFILE}"
 
+	# Check for findings from a prior --triage=<id> run and apply any
+	# recommended exclusions that the user has not already overridden.
+	local findings_file="${HOME}/.cache/firephlox/triage-${snap_id}.findings"
+	if [[ -f "${findings_file}" ]]; then
+		firephlox_info "Findings file found from prior --triage=${snap_id}:"
+		while IFS=: read -r directive detail; do
+			case "${directive}" in
+				warn)
+					firephlox_warn "  [triage] ${detail}" ;;
+				recommend-exclude)
+					if _fp_revive_excluded "${detail}"; then
+						firephlox_info "  [triage] recommend-exclude:${detail} – already in --exclude, honoured"
+					else
+						FIREPHLOX_REVIVE_EXCLUDE="${FIREPHLOX_REVIVE_EXCLUDE:+${FIREPHLOX_REVIVE_EXCLUDE},}${detail}"
+						firephlox_warn "  [triage] auto-applied recommend-exclude:${detail} – add --exclude=${detail} explicitly to suppress this message"
+					fi ;;
+			esac
+		done < "${findings_file}"
+	fi
+
 	# --- Revive 2: Pre-operative assessment ------------------------------
 	firephlox_section 'Revive 2 · Pre-operative tissue assessment'
 
