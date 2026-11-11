@@ -303,7 +303,7 @@ firephlox_revive() {
 	fi
 
 	# 3F — Neural pathway configuration (selected prefs → user.js)
-	if ! _fp_revive_excluded 'prefs'; then
+	if ! _fp_revive_excluded 'prefs' || [[ -n "${FIREPHLOX_PREFS_ONLY:-}" ]]; then
 		if [[ "${has_prefs}" == 'yes' ]]; then
 			firephlox_info 'Neural pathway configuration (preferences)…'
 			_fp_revive_xplant_prefs "${src_profile}/prefs.js" "${dst_profile}/user.js"
@@ -492,10 +492,14 @@ _fp_revive_xplant_file() {
 _fp_revive_xplant_prefs() {
 	local src_prefs="$1" dst_userjs="$2"
 	local count
-	count="$(python3 - "${src_prefs}" "${dst_userjs}" <<'PYTHON'
-import re, sys, time
+	count="$(FIREPHLOX_PREFS_ONLY="${FIREPHLOX_PREFS_ONLY:-}" python3 - "${src_prefs}" "${dst_userjs}" <<'PYTHON'
+import re, sys, os, time
 
 src, dst = sys.argv[1], sys.argv[2]
+
+# --prefs-only whitelist (overrides the exclusion list when set)
+prefs_only_raw = os.environ.get('FIREPHLOX_PREFS_ONLY', '').strip()
+prefs_only = tuple(p.strip() for p in prefs_only_raw.split(',') if p.strip()) if prefs_only_raw else ()
 
 EXCLUDED_PREFIXES = (
     'datareporting.',
@@ -535,12 +539,17 @@ with open(src) as f:
         if not m:
             continue
         key, val = m.group(1), m.group(2)
-        if any(key.startswith(p) for p in EXCLUDED_PREFIXES):
-            continue
-        if key in EXCLUDED_EXACT:
-            continue
-        if key in FIREPHLOX_LOCKED and val == FIREPHLOX_LOCKED[key]:
-            continue  # zeroed/redirected by firephlox policy – let Firefox regenerate
+        if prefs_only:
+            # Whitelist mode: only transplant prefs matching a given namespace.
+            if not any(key.startswith(p) for p in prefs_only):
+                continue
+        else:
+            if any(key.startswith(p) for p in EXCLUDED_PREFIXES):
+                continue
+            if key in EXCLUDED_EXACT:
+                continue
+            if key in FIREPHLOX_LOCKED and val == FIREPHLOX_LOCKED[key]:
+                continue  # zeroed/redirected by firephlox policy – let Firefox regenerate
         if PATH_RE.search(val):
             continue
         lines.append(f'user_pref("{key}", {val});')
