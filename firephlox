@@ -56,6 +56,7 @@ FIREPHLOX_REVIVE_SNAPSHOT=''
 FIREPHLOX_ELIMINATE_SNAPSHOT=''
 FIREPHLOX_ELIMINATE_FULL=0
 FIREPHLOX_ELIMINATE_SMART=0
+FIREPHLOX_ELIMINATE_CULPRITS=1
 FIREPHLOX_REVIVE_EXCLUDE=''
 FIREPHLOX_PREFS_ONLY=''
 FIREPHLOX_BACKUP=0
@@ -79,6 +80,7 @@ Options:
       --eliminate=<id> Progressive pref-namespace elimination test.
       --full           With --eliminate: one term per round (maximum precision).
       --smart          With --eliminate: grouped pass, then auto-splits the culprit batch.
+      --culprits=<n>   With --eliminate: search for up to n pathogens in sequence (default 1).
       --fresh       With --revive: cultivate a fresh clone (wipe current profile first).
       --backup      With --revive --fresh: archive the wiped profile to .pre-revive-* instead of deleting it.
       --cleanup     Remove all .pre-revive-* backup directories left by previous --backup runs.
@@ -122,6 +124,7 @@ parse_args() {
 			--eliminate=*)    FIREPHLOX_ELIMINATE_SNAPSHOT="${1#*=}" ;;
 			--full)           FIREPHLOX_ELIMINATE_FULL=1 ;;
 			--smart)          FIREPHLOX_ELIMINATE_SMART=1 ;;
+			--culprits=*)     FIREPHLOX_ELIMINATE_CULPRITS="${1#*=}" ;;
 			--fresh)        FIREPHLOX_FRESH=1 ;;
 			--backup)       FIREPHLOX_BACKUP=1 ;;
 			--cleanup)      FIREPHLOX_CLEANUP=1 ;;
@@ -157,7 +160,7 @@ main() {
 		source "${module}"
 	done
 
-	export FIREPHLOX_DRY_RUN FIREPHLOX_ASSUME_YES FIREPHLOX_SKIP_PURGE FIREPHLOX_SKIP_SHUFFLE FIREPHLOX_SIGN FIREPHLOX_AMO_KEY FIREPHLOX_AMO_SECRET FIREPHLOX_SIGNED_XPI FIREPHLOX_RESTORE FIREPHLOX_RESTORE_SNAPSHOT FIREPHLOX_TRIAGE FIREPHLOX_TRIAGE_SNAPSHOT FIREPHLOX_REVIVE_SNAPSHOT FIREPHLOX_FRESH FIREPHLOX_BACKUP FIREPHLOX_REVIVE_EXCLUDE FIREPHLOX_PREFS_ONLY FIREPHLOX_ELIMINATE_SNAPSHOT FIREPHLOX_ELIMINATE_FULL FIREPHLOX_ELIMINATE_SMART FIREPHLOX_CLEANUP
+	export FIREPHLOX_DRY_RUN FIREPHLOX_ASSUME_YES FIREPHLOX_SKIP_PURGE FIREPHLOX_SKIP_SHUFFLE FIREPHLOX_SIGN FIREPHLOX_AMO_KEY FIREPHLOX_AMO_SECRET FIREPHLOX_SIGNED_XPI FIREPHLOX_RESTORE FIREPHLOX_RESTORE_SNAPSHOT FIREPHLOX_TRIAGE FIREPHLOX_TRIAGE_SNAPSHOT FIREPHLOX_REVIVE_SNAPSHOT FIREPHLOX_FRESH FIREPHLOX_BACKUP FIREPHLOX_REVIVE_EXCLUDE FIREPHLOX_PREFS_ONLY FIREPHLOX_ELIMINATE_SNAPSHOT FIREPHLOX_ELIMINATE_FULL FIREPHLOX_ELIMINATE_SMART FIREPHLOX_ELIMINATE_CULPRITS FIREPHLOX_CLEANUP
 
 	firephlox_banner
 	firephlox_is_dry_run && firephlox_warn 'DRY-RUN mode: no files will be written or deleted.'
