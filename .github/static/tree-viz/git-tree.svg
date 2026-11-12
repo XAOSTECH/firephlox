@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" 
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="1200" height="1660" 
+     viewBox="0 0 1200 1660">
+  <defs>
+    <radialGradient id="leafGradient">
+      <stop offset="0%" style="stop-color:#22c55e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16a34a;stop-opacity:0.8" />
+    </radialGradient>
+    <radialGradient id="mergeGradient">
+      <stop offset="0%" style="stop-color:#a78bfa;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:0.8" />
+    </radialGradient>
+    <radialGradient id="forkGradient">
+      <stop offset="0%" style="stop-color:#fb923c;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ea580c;stop-opacity:0.8" />
+    </radialGradient>
+    <radialGradient id="tagGradient">
+      <stop offset="0%" style="stop-color:#38bdf8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0284c7;stop-opacity:0.8" />
+    </radialGradient>
+    <style>
+      .branch-line { stroke: #64748b; stroke-width: 2; fill: none; opacity: 0.7; }
+      .trunk-line { stroke: #22c55e; stroke-width: 2.5; fill: none; opacity: 0.6; }
+      .commit-leaf { cursor: pointer; }
+      .commit-leaf:hover { filter: brightness(1.5); }
+      .branch-label { font-family: sans-serif; font-size: 12px; font-weight: bold; fill: #0f172a; }
+    </style>
+  </defs>
+  
+  <rect width="1200" height="1660" fill="#f8fafc"/>
+  <defs>
+    <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
+      <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#e2e8f0" stroke-width="0.5" opacity="0.3"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="1660" fill="url(#grid)"/>
+  
+  <!-- Branch connection lines -->
+  <g id="branches">
+    <line class="trunk-line" x1="600" y1="60" x2="600" y2="100"/>
+    <line class="trunk-line" x1="600" y1="100" x2="600" y2="140"/>
+    <line class="trunk-line" x1="600" y1="140" x2="600" y2="180"/>
+    <line class="trunk-line" x1="600" y1="180" x2="600" y2="220"/>
+    <line class="trunk-line" x1="600" y1="220" x2="600" y2="260"/>
+    <line class="trunk-line" x1="600" y1="260" x2="600" y2="300"/>
+    <line class="trunk-line" x1="600" y1="300" x2="600" y2="340"/>
+    <line class="trunk-line" x1="600" y1="340" x2="600" y2="380"/>
+    <line class="trunk-line" x1="600" y1="380" x2="600" y2="420"/>
+    <line class="trunk-line" x1="600" y1="420" x2="600" y2="460"/>
+    <line class="trunk-line" x1="600" y1="460" x2="600" y2="500"/>
+    <line class="trunk-line" x1="600" y1="500" x2="600" y2="540"/>
+    <line class="trunk-line" x1="600" y1="540" x2="600" y2="580"/>
+    <line class="trunk-line" x1="600" y1="580" x2="600" y2="620"/>
+    <line class="trunk-line" x1="600" y1="620" x2="600" y2="660"/>
+    <line class="trunk-line" x1="600" y1="660" x2="600" y2="700"/>
+    <line class="trunk-line" x1="600" y1="700" x2="600" y2="740"/>
+    <line class="trunk-line" x1="600" y1="740" x2="600" y2="780"/>
+    <line class="trunk-line" x1="600" y1="780" x2="600" y2="820"/>
+    <line class="trunk-line" x1="600" y1="820" x2="600" y2="860"/>
+    <line class="trunk-line" x1="600" y1="860" x2="600" y2="900"/>
+    <line class="trunk-line" x1="600" y1="900" x2="600" y2="940"/>
+    <line class="trunk-line" x1="600" y1="940" x2="600" y2="980"/>
+    <line class="trunk-line" x1="600" y1="980" x2="600" y2="1020"/>
+    <line class="trunk-line" x1="600" y1="1020" x2="600" y2="1060"/>
+    <line class="trunk-line" x1="600" y1="1060" x2="600" y2="1100"/>
+    <line class="trunk-line" x1="600" y1="1100" x2="600" y2="1140"/>
+    <line class="trunk-line" x1="600" y1="1140" x2="600" y2="1180"/>
+    <line class="trunk-line" x1="600" y1="1180" x2="600" y2="1220"/>
+    <line class="trunk-line" x1="600" y1="1220" x2="600" y2="1260"/>
+    <line class="trunk-line" x1="600" y1="1260" x2="600" y2="1300"/>
+    <line class="trunk-line" x1="600" y1="1300" x2="600" y2="1340"/>
+    <line class="trunk-line" x1="600" y1="1340" x2="600" y2="1380"/>
+    <line class="trunk-line" x1="600" y1="1380" x2="600" y2="1420"/>
+    <line class="trunk-line" x1="600" y1="1420" x2="600" y2="1460"/>
+    <line class="trunk-line" x1="600" y1="1460" x2="600" y2="1500"/>
+    <line class="trunk-line" x1="600" y1="1500" x2="600" y2="1540"/>
+  </g>
+  <!-- Commit nodes -->
+  <g id="commits">
+    <circle class="commit-leaf" cx="600" cy="60" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>d140021: chore: humanise hard-wrapped comments and prose</title></circle>
+    <circle class="commit-leaf" cx="600" cy="100" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>f5965a2: chore(dc-init): update workflows,actions,docs</title></circle>
+    <circle class="commit-leaf" cx="600" cy="140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>fb2f472: docs(FINDINGS): add confirmed root cause - gfx.* namespace</title></circle>
+    <circle class="commit-leaf" cx="600" cy="180" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>7697710: docs(README): full rewrite covering all new features; add improved icon</title></circle>
+    <circle class="commit-leaf" cx="600" cy="220" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>aff3590: feat(eliminate): add --culprits=N for multi-pathogen elimination</title></circle>
+    <circle class="commit-leaf" cx="600" cy="260" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>1f461b3: feat(eliminate): complete conclusion command and add --exclude compatibility</title></circle>
+    <circle class="commit-leaf" cx="600" cy="300" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>87f6b94: fix(eliminate): wait for snap Firefox startup and guard sleep with </title></circle>
+    <circle class="commit-leaf" cx="600" cy="340" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>c659f90: fix(revive,triage,restore): move all large staging from /tmp to ~/.cache/firephlox</title></circle>
+    <circle class="commit-leaf" cx="600" cy="380" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>7e5d7b1: fix(revive): improve --cleanup with size report, singular/plural, and Phlox flavour</title></circle>
+    <circle class="commit-leaf" cx="600" cy="420" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>a112a91: fix(revive): default fresh clone to wipe, add --backup opt-in and --cleanup</title></circle>
+    <circle class="commit-leaf" cx="600" cy="460" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>5f849ee: feat(eliminate): add Ctrl+C countdown and -y auto-advance</title></circle>
+    <circle class="commit-leaf" cx="600" cy="500" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>31ffaf0: feat(eliminate): add --smart mode</title></circle>
+    <circle class="commit-leaf" cx="600" cy="540" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>d3c70ab: feat(eliminate): add --full mode for single-term elimination rounds</title></circle>
+    <circle class="commit-leaf" cx="600" cy="580" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>eae757f: feat(eliminate): open Fantastic Planet on archive.org as elimination test subject</title></circle>
+    <circle class="commit-leaf" cx="600" cy="620" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>393dc64: feat(eliminate): add --eliminate=&lt;id&gt; progressive pref-namespace elimination protocol</title></circle>
+    <circle class="commit-leaf" cx="600" cy="660" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>8885623: feat(lib/triage): extract shared diagnostic helpers into triage-kit lib</title></circle>
+    <circle class="commit-leaf" cx="600" cy="700" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>9e956a0: refactor(src): remove numbering from utility modules restore, triage, revive</title></circle>
+    <circle class="commit-leaf" cx="600" cy="740" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>e333ea9: docs(FINDINGS): document the 2026-11-11 Firefox snap profile corruption incident</title></circle>
+    <circle class="commit-leaf" cx="600" cy="780" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>b9dfa2d: fix(09_triage): only announce findings file when issues are present</title></circle>
+    <circle class="commit-leaf" cx="600" cy="820" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>ae1917e: feat(10_revive): add --prefs-only for selective pref namespace transplant</title></circle>
+    <circle class="commit-leaf" cx="600" cy="860" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>05eaf2d: feat(09_triage,10_revive): triage-revive cooperation via findings file</title></circle>
+    <circle class="commit-leaf" cx="600" cy="900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>0df3910: feat(08_restore,02_policies,10_revive): scrub firephlox-managed prefs and add DAU telemetry policy</title></circle>
+    <circle class="commit-leaf" cx="600" cy="940" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>ac5d833: feat(firephlox): add --triage=&lt;id&gt; and --restore=&lt;id&gt; target overrides, extract _fp_stage_snapshot</title></circle>
+    <circle class="commit-leaf" cx="600" cy="980" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>5e7b418: fix(09_triage): drop syntax_count variable that caused arithmetic error</title></circle>
+    <circle class="commit-leaf" cx="600" cy="1020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>132138d: fix(09_triage): add prefs.js syntax validation and improve profile error hint</title></circle>
+    <circle class="commit-leaf" cx="600" cy="1060" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>7f15600: feat(10_revive): add --exclude flag for per-category transplant exclusion</title></circle>
+    <circle class="commit-leaf" cx="600" cy="1100" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>660462f: feat(10_revive): add fresh clone option alongside active profile transplant</title></circle>
+    <circle class="commit-leaf" cx="600" cy="1140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>88842ad: fix(10_revive): skip absolute symlinks during tar extraction</title></circle>
+    <circle class="commit-leaf" cx="600" cy="1180" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>ff14745: fix(10_revive): unpack .tgz archives, not only .tar</title></circle>
+    <circle class="commit-leaf" cx="600" cy="1220" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>07dfa8b: fix(10_revive): unpack tar-in-zip structure and add diagnostic output on failure</title></circle>
+    <circle class="commit-leaf" cx="600" cy="1260" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>3c394a1: fix(10_revive): drop -path filter from find_in_stage</title></circle>
+    <circle class="commit-leaf" cx="600" cy="1300" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>f508152: fix(10_revive): use privileged du for size and chown after privileged cp</title></circle>
+    <circle class="commit-leaf" cx="600" cy="1340" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>c3250f3: fix(10_revive): use if/fi in find_zip to prevent set -e triggering on empty match</title></circle>
+    <circle class="commit-leaf" cx="600" cy="1380" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>3d1414b: fix(10_revive): list vault directory before filtering instead of glob-expanding inside it</title></circle>
+    <circle class="commit-leaf" cx="600" cy="1420" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>8b61fec: refactor(10_revive): expand transplant to full profile data and add Phlox flavour</title></circle>
+    <circle class="commit-leaf" cx="600" cy="1460" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>62e4792: feat(triage+revive): add flags for profile diagnostics and snapshot transplant</title></circle>
+    <circle class="commit-leaf" cx="600" cy="1500" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>289111d: chore(dc-init): load all templates</title></circle>
+    <circle class="commit-leaf" cx="600" cy="1540" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5"><title>bb797f1: init: slightly condensed local history/scaffold</title></circle>
+  </g>
+  
+  <!-- Legend -->
+  <g id="legend" transform="translate(20, 20)">
+    <rect width="200" height="110" fill="white" stroke="#cbd5e1" stroke-width="1" rx="4"/>
+    <circle cx="20" cy="25" r="5" fill="url(#leafGradient)" stroke="#16a34a"/>
+    <text x="32" y="30" class="branch-label" font-size="12">Regular Commit</text>
+    <circle cx="20" cy="50" r="6" fill="url(#mergeGradient)" stroke="#7c3aed"/>
+    <text x="32" y="55" class="branch-label" font-size="12">Merge Commit</text>
+    <circle cx="20" cy="75" r="6" fill="url(#forkGradient)" stroke="#ea580c"/>
+    <text x="32" y="80" class="branch-label" font-size="12">Fork Point</text>
+    <circle cx="20" cy="100" r="6" fill="url(#tagGradient)" stroke="#0284c7"/>
+    <text x="32" y="105" class="branch-label" font-size="12">Tagged</text>
+  </g>
+  
+  <!-- Repository info -->
+  <g id="info" transform="translate(20, 1620)">
+    <text x="0" y="0" class="branch-label" font-size="12" fill="#666">
+      Repository: firephlox
+    </text>
+    <text x="0" y="20" class="branch-label" font-size="10" fill="#999">
+      Generated: 2026-11-12 18:06:34 UTC
+    </text>
+  </g>
+</svg>

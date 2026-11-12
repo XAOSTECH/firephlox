@@ -1,0 +1,435 @@
+{
+  "metadata": {
+    "repository": "firephlox",
+    "current_branch": "main",
+    "repo_url": "https://github.com/XAOSTECH/firephlox",
+    "generated": "2026-11-12T18:06:34Z",
+    "max_commits": 500
+  },
+  "commits": [
+  {
+    "sha": "d14002116be11213478afcce220ac4817ae0067e",
+    "short": "d140021",
+    "parents": "f5965a299b4561537975c95b8b1a18ccc34009d4",
+    "author": "xaos-bot",
+    "email": "262248812+xaos-bot@users.noreply.github.com",
+    "date": "2026-11-12T18:08:32Z",
+    "timestamp": 1794506912,
+    "subject": "chore: humanise hard-wrapped comments and prose",
+    "refs": "origin/humanise/20261112-180832"
+  },
+  {
+    "sha": "f5965a299b4561537975c95b8b1a18ccc34009d4",
+    "short": "f5965a2",
+    "parents": "fb2f472091dd9631de8fccea26e40ce1b04e0d19",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-12T19:06:34+01:00",
+    "timestamp": 1794506794,
+    "subject": "chore(dc-init): update workflows,actions,docs",
+    "refs": "HEAD -> main, origin/main"
+  },
+  {
+    "sha": "fb2f472091dd9631de8fccea26e40ce1b04e0d19",
+    "short": "fb2f472",
+    "parents": "7697710d4d285123492883845674e50b40017992",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-12T01:28:36Z",
+    "timestamp": 1794446916,
+    "subject": "docs(FINDINGS): add confirmed root cause - gfx.* namespace",
+    "refs": ""
+  },
+  {
+    "sha": "7697710d4d285123492883845674e50b40017992",
+    "short": "7697710",
+    "parents": "aff35906389fd5483e6b9ebc9e26dfc977a15d7e",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-12T01:24:24Z",
+    "timestamp": 1794446664,
+    "subject": "docs(README): full rewrite covering all new features; add improved icon",
+    "refs": ""
+  },
+  {
+    "sha": "aff35906389fd5483e6b9ebc9e26dfc977a15d7e",
+    "short": "aff3590",
+    "parents": "1f461b3affa44aecde6cd466e76b4f67bfb95e8d",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-12T01:19:11Z",
+    "timestamp": 1794446351,
+    "subject": "feat(eliminate): add --culprits=N for multi-pathogen elimination",
+    "refs": ""
+  },
+  {
+    "sha": "1f461b3affa44aecde6cd466e76b4f67bfb95e8d",
+    "short": "1f461b3",
+    "parents": "87f6b94adc543a5d070462e5bcffc3754a6696c8",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-12T01:18:04Z",
+    "timestamp": 1794446284,
+    "subject": "feat(eliminate): complete conclusion command and add --exclude compatibility",
+    "refs": ""
+  },
+  {
+    "sha": "87f6b94adc543a5d070462e5bcffc3754a6696c8",
+    "short": "87f6b94",
+    "parents": "c659f9039ebffc16fee4e55623c7a4b3d272391c",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-12T00:49:37Z",
+    "timestamp": 1794444577,
+    "subject": "fix(eliminate): wait for snap Firefox startup and guard sleep with ",
+    "refs": ""
+  },
+  {
+    "sha": "c659f9039ebffc16fee4e55623c7a4b3d272391c",
+    "short": "c659f90",
+    "parents": "7e5d7b1da2f95ff33f922dfe669556dac91c0ab4",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-12T00:45:27Z",
+    "timestamp": 1794444327,
+    "subject": "fix(revive,triage,restore): move all large staging from /tmp to ~/.cache/firephlox",
+    "refs": ""
+  },
+  {
+    "sha": "7e5d7b1da2f95ff33f922dfe669556dac91c0ab4",
+    "short": "7e5d7b1",
+    "parents": "a112a91babb40541b660dc930e987bf7289db822",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-12T00:43:45Z",
+    "timestamp": 1794444225,
+    "subject": "fix(revive): improve --cleanup with size report, singular/plural, and Phlox flavour",
+    "refs": ""
+  },
+  {
+    "sha": "a112a91babb40541b660dc930e987bf7289db822",
+    "short": "a112a91",
+    "parents": "5f849eeaa280c4dcdf136e6d6bae28f764fc7c2a",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-12T00:36:44Z",
+    "timestamp": 1794443804,
+    "subject": "fix(revive): default fresh clone to wipe, add --backup opt-in and --cleanup",
+    "refs": ""
+  },
+  {
+    "sha": "5f849eeaa280c4dcdf136e6d6bae28f764fc7c2a",
+    "short": "5f849ee",
+    "parents": "31ffaf0142cf24c23121997ac5b82ce3623656d1",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-12T00:35:29Z",
+    "timestamp": 1794443729,
+    "subject": "feat(eliminate): add Ctrl+C countdown and -y auto-advance",
+    "refs": ""
+  },
+  {
+    "sha": "31ffaf0142cf24c23121997ac5b82ce3623656d1",
+    "short": "31ffaf0",
+    "parents": "d3c70abe10bccc830f57ef2888106f139832f5ab",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-12T00:35:03Z",
+    "timestamp": 1794443703,
+    "subject": "feat(eliminate): add --smart mode",
+    "refs": ""
+  },
+  {
+    "sha": "d3c70abe10bccc830f57ef2888106f139832f5ab",
+    "short": "d3c70ab",
+    "parents": "eae757fab37f4693dc45561e198226af69d0495c",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-12T00:16:46Z",
+    "timestamp": 1794442606,
+    "subject": "feat(eliminate): add --full mode for single-term elimination rounds",
+    "refs": ""
+  },
+  {
+    "sha": "eae757fab37f4693dc45561e198226af69d0495c",
+    "short": "eae757f",
+    "parents": "393dc648c59525f2c1a72889fef3326b8ca8d9dd",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-12T00:10:40Z",
+    "timestamp": 1794442240,
+    "subject": "feat(eliminate): open Fantastic Planet on archive.org as elimination test subject",
+    "refs": ""
+  },
+  {
+    "sha": "393dc648c59525f2c1a72889fef3326b8ca8d9dd",
+    "short": "393dc64",
+    "parents": "8885623e6e4e4990aa72eb35832e8043780d7579",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T23:16:43Z",
+    "timestamp": 1794439003,
+    "subject": "feat(eliminate): add --eliminate=<id> progressive pref-namespace elimination protocol",
+    "refs": ""
+  },
+  {
+    "sha": "8885623e6e4e4990aa72eb35832e8043780d7579",
+    "short": "8885623",
+    "parents": "9e956a0257bd22f258aa3bb3df8ed411fa653558",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T23:15:51Z",
+    "timestamp": 1794438951,
+    "subject": "feat(lib/triage): extract shared diagnostic helpers into triage-kit lib",
+    "refs": ""
+  },
+  {
+    "sha": "9e956a0257bd22f258aa3bb3df8ed411fa653558",
+    "short": "9e956a0",
+    "parents": "e333ea919f13b14a06aa6b956ad5bf2c6f3ad700",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T23:15:16Z",
+    "timestamp": 1794438916,
+    "subject": "refactor(src): remove numbering from utility modules restore, triage, revive",
+    "refs": ""
+  },
+  {
+    "sha": "e333ea919f13b14a06aa6b956ad5bf2c6f3ad700",
+    "short": "e333ea9",
+    "parents": "b9dfa2dd02669786cf5ef3f41298186ee46432ef",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T22:53:29Z",
+    "timestamp": 1794437609,
+    "subject": "docs(FINDINGS): document the 2026-11-11 Firefox snap profile corruption incident",
+    "refs": ""
+  },
+  {
+    "sha": "b9dfa2dd02669786cf5ef3f41298186ee46432ef",
+    "short": "b9dfa2d",
+    "parents": "ae1917e72aa9873e18c3cca39df766f3a5c10706",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T22:52:45Z",
+    "timestamp": 1794437565,
+    "subject": "fix(09_triage): only announce findings file when issues are present",
+    "refs": ""
+  },
+  {
+    "sha": "ae1917e72aa9873e18c3cca39df766f3a5c10706",
+    "short": "ae1917e",
+    "parents": "05eaf2d416295b0e09dbb3ae2e08d9f7a56a13e3",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T22:29:29Z",
+    "timestamp": 1794436169,
+    "subject": "feat(10_revive): add --prefs-only for selective pref namespace transplant",
+    "refs": ""
+  },
+  {
+    "sha": "05eaf2d416295b0e09dbb3ae2e08d9f7a56a13e3",
+    "short": "05eaf2d",
+    "parents": "0df3910c4de2b249941a9fba83782d62edfe37d2",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T22:28:32Z",
+    "timestamp": 1794436112,
+    "subject": "feat(09_triage,10_revive): triage-revive cooperation via findings file",
+    "refs": ""
+  },
+  {
+    "sha": "0df3910c4de2b249941a9fba83782d62edfe37d2",
+    "short": "0df3910",
+    "parents": "ac5d8331a78eb3a313abdd89dd4ba457a19b1ed7",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T22:27:53Z",
+    "timestamp": 1794436073,
+    "subject": "feat(08_restore,02_policies,10_revive): scrub firephlox-managed prefs and add DAU telemetry policy",
+    "refs": ""
+  },
+  {
+    "sha": "ac5d8331a78eb3a313abdd89dd4ba457a19b1ed7",
+    "short": "ac5d833",
+    "parents": "5e7b4182bf6f26a54e126697217c5cd25c873c65",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T22:27:12Z",
+    "timestamp": 1794436032,
+    "subject": "feat(firephlox): add --triage=<id> and --restore=<id> target overrides, extract _fp_stage_snapshot",
+    "refs": ""
+  },
+  {
+    "sha": "5e7b4182bf6f26a54e126697217c5cd25c873c65",
+    "short": "5e7b418",
+    "parents": "132138d320fead865d1102f9c6a2d112819c8e92",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T22:25:05Z",
+    "timestamp": 1794435905,
+    "subject": "fix(09_triage): drop syntax_count variable that caused arithmetic error",
+    "refs": ""
+  },
+  {
+    "sha": "132138d320fead865d1102f9c6a2d112819c8e92",
+    "short": "132138d",
+    "parents": "7f156002a19dfd6b96dbba30b888eab3d7eb8633",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T21:51:57Z",
+    "timestamp": 1794433917,
+    "subject": "fix(09_triage): add prefs.js syntax validation and improve profile error hint",
+    "refs": ""
+  },
+  {
+    "sha": "7f156002a19dfd6b96dbba30b888eab3d7eb8633",
+    "short": "7f15600",
+    "parents": "660462fe6e49d8e8dde30bdb0fdeee689bb72bd1",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T21:08:59Z",
+    "timestamp": 1794431339,
+    "subject": "feat(10_revive): add --exclude flag for per-category transplant exclusion",
+    "refs": ""
+  },
+  {
+    "sha": "660462fe6e49d8e8dde30bdb0fdeee689bb72bd1",
+    "short": "660462f",
+    "parents": "88842ad8aec32ae84fb197cf5aff21826160bec7",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T20:50:50Z",
+    "timestamp": 1794430250,
+    "subject": "feat(10_revive): add fresh clone option alongside active profile transplant",
+    "refs": ""
+  },
+  {
+    "sha": "88842ad8aec32ae84fb197cf5aff21826160bec7",
+    "short": "88842ad",
+    "parents": "ff1474585b86d000a3307b2f87eb5e73c93f81ec",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T20:43:52Z",
+    "timestamp": 1794429832,
+    "subject": "fix(10_revive): skip absolute symlinks during tar extraction",
+    "refs": ""
+  },
+  {
+    "sha": "ff1474585b86d000a3307b2f87eb5e73c93f81ec",
+    "short": "ff14745",
+    "parents": "07dfa8ba53e7d5638a2cae86892ed73486136f34",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T20:42:01Z",
+    "timestamp": 1794429721,
+    "subject": "fix(10_revive): unpack .tgz archives, not only .tar",
+    "refs": ""
+  },
+  {
+    "sha": "07dfa8ba53e7d5638a2cae86892ed73486136f34",
+    "short": "07dfa8b",
+    "parents": "3c394a137ac2065687a515adadc1bc9023ce83d3",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T20:39:46Z",
+    "timestamp": 1794429586,
+    "subject": "fix(10_revive): unpack tar-in-zip structure and add diagnostic output on failure",
+    "refs": ""
+  },
+  {
+    "sha": "3c394a137ac2065687a515adadc1bc9023ce83d3",
+    "short": "3c394a1",
+    "parents": "f5081524fa180abd0f48dd3776fdc9b7f8e4d0b7",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T20:37:51Z",
+    "timestamp": 1794429471,
+    "subject": "fix(10_revive): drop -path filter from find_in_stage",
+    "refs": ""
+  },
+  {
+    "sha": "f5081524fa180abd0f48dd3776fdc9b7f8e4d0b7",
+    "short": "f508152",
+    "parents": "c3250f374430ef24adf41a6224286dad6f10fb9c",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T20:33:49Z",
+    "timestamp": 1794429229,
+    "subject": "fix(10_revive): use privileged du for size and chown after privileged cp",
+    "refs": ""
+  },
+  {
+    "sha": "c3250f374430ef24adf41a6224286dad6f10fb9c",
+    "short": "c3250f3",
+    "parents": "3d1414bd4dd1e9c005e5d16ea017ae59f01bd47a",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T20:29:05Z",
+    "timestamp": 1794428945,
+    "subject": "fix(10_revive): use if/fi in find_zip to prevent set -e triggering on empty match",
+    "refs": ""
+  },
+  {
+    "sha": "3d1414bd4dd1e9c005e5d16ea017ae59f01bd47a",
+    "short": "3d1414b",
+    "parents": "8b61fecccc3161025bf22193d14ddad0d62b77f4",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T20:27:08Z",
+    "timestamp": 1794428828,
+    "subject": "fix(10_revive): list vault directory before filtering instead of glob-expanding inside it",
+    "refs": ""
+  },
+  {
+    "sha": "8b61fecccc3161025bf22193d14ddad0d62b77f4",
+    "short": "8b61fec",
+    "parents": "62e479228b73a4783fefd006a28037a65c266a52",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T20:20:15Z",
+    "timestamp": 1794428415,
+    "subject": "refactor(10_revive): expand transplant to full profile data and add Phlox flavour",
+    "refs": ""
+  },
+  {
+    "sha": "62e479228b73a4783fefd006a28037a65c266a52",
+    "short": "62e4792",
+    "parents": "289111d71143fc5e80330593cc8ed8dec37e5259",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T19:53:24Z",
+    "timestamp": 1794426804,
+    "subject": "feat(triage+revive): add flags for profile diagnostics and snapshot transplant",
+    "refs": ""
+  },
+  {
+    "sha": "289111d71143fc5e80330593cc8ed8dec37e5259",
+    "short": "289111d",
+    "parents": "bb797f19f8baa975f53bbe9384d78f7e26026ad2",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T20:29:18+01:00",
+    "timestamp": 1794425358,
+    "subject": "chore(dc-init): load all templates",
+    "refs": ""
+  },
+  {
+    "sha": "bb797f19f8baa975f53bbe9384d78f7e26026ad2",
+    "short": "bb797f1",
+    "parents": "",
+    "author": "xaoscience",
+    "email": "69734795+xaoscience@users.noreply.github.com",
+    "date": "2026-11-11T19:28:50Z",
+    "timestamp": 1794425330,
+    "subject": "init: slightly condensed local history/scaffold",
+    "refs": ""
+  }
+],
+  "branches": [
+  {"name":"f5965a299b4561537975c95b8b1a18ccc34009d4 chore(dc-init): update workflows,actions,docs","sha":"*","current":false,"merged":false}
+],
+  "tags": [
+
+]
+}
