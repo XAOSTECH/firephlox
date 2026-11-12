@@ -4,31 +4,15 @@
 #   "Every answer leads to a new question. That is the nature of science."
 #       — Dr. Phlox
 #
-# Runs a binary-search-style series of revives against a snapshot, adding
-# one pref namespace batch per round and launching Firefox after each for
-# manual verification. When a round breaks the browser, the offending
-# batch is reported.
-#
-# Usage: ./firephlox --eliminate=<snapshot-id>
-#   snapshot-id is the numeric ID shown by: snap saved firefox
-#
-# Each round:
-#   1. Runs a fresh-clone revive with the cumulative pref set so far.
-#   2. Launches Firefox (the user tests the scenario).
-#   3. Waits for Firefox to close.
-#   4. Asks: "Did it work?" [y/N]
-#   5. If yes → adds the batch to the working set and continues.
-#      If no  → declares the batch as the culprit and stops.
-#
-# The batches are ordered from safest/most-expected to most-suspected,
-# so the failing round is reached quickly without unnecessary iterations.
+# Usage:
+#   ./firephlox --eliminate=<id>           standard  – grouped batches
+#   ./firephlox --eliminate=<id> --full    full      – one term per round
+#   ./firephlox --eliminate=<id> --smart   smart     – grouped pass, then
+#                                                      auto-splits the culprit
 
-# Canonical test URL – Fantastic Planet (1973), a xenobiological study
-# recommended by Dr. Phlox for media verification during elimination rounds ("relaxing edutainment for encountering alien species"). 
-readonly _FP_ELIM_TEST_URL='https://archive.org/details/fantastic-planet__1973'
+readonly _FP_ELIM_TEST_URL='https://archive.org/details/fantastic__planet1973'
 
-# Pref namespace batches, ordered safest → most suspected.
-# Each entry is a comma-separated --prefs-only argument for one round.
+# Standard batches, ordered safest → most suspected.
 readonly _FP_ELIM_BATCHES=(
     'browser,network,dom,security,gfx,layout'
     'extensions,privacy,signon,services'
@@ -44,89 +28,108 @@ firephlox_eliminate() {
 	[[ -n "${snap_id}" ]] || \
 		firephlox_die 'No specimen ID given. Usage: --eliminate=<id>  (run: snap saved firefox)'
 
-	# Build the active batch list from the standard batches.
-	# --full splits every comma-separated batch into individual rounds.
-	local -a batches=()
-	if [[ "${FIREPHLOX_ELIMINATE_FULL:-0}" == '1' ]]; then
-		local b term
-		for b in "${_FP_ELIM_BATCHES[@]}"; do
-			local IFS=','
-			for term in ${b}; do
-				[[ -n "${term}" ]] && batches+=("${term}")
-			done
-		done
-		firephlox_section "Elimination · Full protocol for specimen ${snap_id} (${#batches[@]} rounds)"
-	else
-		batches=("${_FP_ELIM_BATCHES[@]}")
-		firephlox_section "Elimination · Standard protocol for specimen ${snap_id} (${#batches[@]} rounds)"
-	fi
-	firephlox_info 'Each round adds one batch, revives, and launches Firefox.'
-	firephlox_info 'The round whose batch causes a regression identifies the culprit.'
-	printf '\n'
-
 	if firephlox_firefox_running; then
 		firephlox_die 'Firefox is currently running. Close it before the elimination protocol.'
 	fi
 
-	local included=''
-	local suspect=''
-	local round=0
+	local -a batches=()
+	if [[ "${FIREPHLOX_ELIMINATE_FULL:-0}" == '1' ]]; then
+		_fp_elim_expand batches "${_FP_ELIM_BATCHES[@]}"
+		firephlox_section "Elimination · Full protocol – specimen ${snap_id} (${#batches[@]} rounds)"
+	else
+		batches=("${_FP_ELIM_BATCHES[@]}")
+		local smart_note=''
+		[[ "${FIREPHLOX_ELIMINATE_SMART:-0}" == '1' ]] && smart_note=' + smart sub-pass on culprit'
+		firephlox_section "Elimination · Standard protocol – specimen ${snap_id} (${#batches[@]} rounds${smart_note})"
+	fi
+	firephlox_info 'Each round adds one batch, revives, and launches Firefox.'
+	firephlox_info 'Close Firefox when done – the protocol will resume automatically.'
+	printf '\n'
 
-	local batch
+	_fp_elim_run_pass '' "${snap_id}" "${batches[@]}"
+	local suspect="${_FP_ELIM_SUSPECT}"
+	local safe="${_FP_ELIM_SAFE}"
+
+	# Smart: if the culprit batch contains multiple terms, run a sub-pass.
+	if [[ "${FIREPHLOX_ELIMINATE_SMART:-0}" == '1' && -n "${suspect}" && "${suspect}" == *,* ]]; then
+		firephlox_section "Elimination · Smart sub-pass – splitting culprit: ${suspect}"
+		local -a sub_batches=()
+		_fp_elim_expand sub_batches "${suspect}"
+		_fp_elim_run_pass "${safe}" "${snap_id}" "${sub_batches[@]}"
+		suspect="${_FP_ELIM_SUSPECT}"
+		safe="${_FP_ELIM_SAFE}"
+	fi
+
+	printf '\n'
+	firephlox_section 'Elimination · Conclusion'
+	if [[ -n "${suspect}" ]]; then
+		firephlox_error "Culprit namespace: ${suspect}"
+		firephlox_info  "Safe namespaces:   ${safe:-none}"
+		if [[ -n "${safe}" ]]; then
+			firephlox_info "To revive without the culprit: ./firephlox --revive=${snap_id} --fresh --prefs-only=${safe}"
+		else
+			firephlox_info "To revive without prefs:       ./firephlox --revive=${snap_id} --fresh --exclude=prefs"
+		fi
+	else
+		firephlox_ok 'All batches passed – the full pref transplant appears safe for this specimen.'
+	fi
+}
+
+# Runs one elimination pass. Sets _FP_ELIM_SUSPECT and _FP_ELIM_SAFE.
+# Args: <initial_safe> <snap_id> <batch> [<batch> ...]
+_fp_elim_run_pass() {
+	local initial_safe="$1" snap_id="$2"; shift 2
+	local -a batches=("$@")
+	_FP_ELIM_SUSPECT=''
+	_FP_ELIM_SAFE="${initial_safe}"
+	local included="${initial_safe}"
+	local round=0 batch
+
 	for batch in "${batches[@]}"; do
 		round=$(( round + 1 ))
 		firephlox_section "Elimination round ${round} · Adding: ${batch}"
 
 		local test_prefs
-		if [[ -z "${included}" ]]; then
-			test_prefs="${batch}"
-		else
-			test_prefs="${included},${batch}"
-		fi
+		[[ -z "${included}" ]] && test_prefs="${batch}" || test_prefs="${included},${batch}"
 
-		# Fresh-clone revive with the cumulative pref set.
+		# FIREPHLOX_FRESH bypasses the recipient menu without touching ASSUME_YES.
 		FIREPHLOX_FRESH=1
 		FIREPHLOX_REVIVE_SNAPSHOT="${snap_id}"
 		FIREPHLOX_PREFS_ONLY="${test_prefs}"
 		FIREPHLOX_REVIVE_EXCLUDE=''
-		FIREPHLOX_ASSUME_YES=1   # skip the recipient-selection prompt
 		firephlox_revive
 
-		# Launch Firefox on the designated test subject.
-		firephlox_info "Launching Firefox for verification…"
-		firephlox_info "${FP_DIM}Dr. Phlox recommends observing the inhabitants of Ygam as relaxing edutainment while awaiting your diagnostic results.${FP_RESET}"
+		firephlox_info 'Launching Firefox…'
+		firephlox_info "${FP_DIM}Dr. Phlox recommends observing the inhabitants of Ygam"
+		firephlox_info "as relaxing edutainment while awaiting your diagnostic results.${FP_RESET}"
 		firefox "${_FP_ELIM_TEST_URL}" &>/dev/null &
+
 		firephlox_info 'Test the scenario (play media, check affected features).'
 		firephlox_info 'Close Firefox when done – the protocol will resume automatically.'
-
-		# Wait for Firefox to exit.
 		while firephlox_firefox_running; do sleep 2; done
 		firephlox_info 'Firefox closed.'
 
-		# Ask user.
 		if firephlox_confirm "Round ${round} – did Firefox work correctly?"; then
 			firephlox_ok "Round ${round} passed – batch not culpable: ${batch}"
 			included="${test_prefs}"
+			_FP_ELIM_SAFE="${included}"
 		else
-			suspect="${batch}"
-			firephlox_error "Round ${round} failed – offending batch identified: ${batch}"
-			break
+			firephlox_error "Round ${round} failed – culprit: ${batch}"
+			_FP_ELIM_SUSPECT="${batch}"
+			return 0
 		fi
 	done
+}
 
-	printf '\n'
-	firephlox_section 'Elimination · Conclusion'
-
-	if [[ -n "${suspect}" ]]; then
-		firephlox_error "Culprit namespace batch: ${suspect}"
-		firephlox_info  "Safe namespaces confirmed:  ${included:-none}"
-		firephlox_info  "To revive without the culprit:"
-		if [[ -n "${included}" ]]; then
-			firephlox_info  "  ./firephlox --revive=${snap_id} --fresh --prefs-only=${included}"
-		else
-			firephlox_info  "  ./firephlox --revive=${snap_id} --fresh --exclude=prefs"
-		fi
-	else
-		firephlox_ok 'All batches passed – the full pref transplant appears safe for this specimen.'
-	fi
+# Splits each comma-separated batch into individual terms.
+# Usage: _fp_elim_expand <array_name> <batch> [<batch> ...]
+_fp_elim_expand() {
+	local -n _elim_ref="$1"; shift
+	local b term
+	for b in "$@"; do
+		local IFS=','
+		for term in ${b}; do
+			[[ -n "${term}" ]] && _elim_ref+=("${term}")
+		done
+	done
 }
