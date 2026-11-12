@@ -1,8 +1,6 @@
 # FINDINGS – Firefox snap profile corruption incident (2026-11-11)
 
-Factual record of a Firefox profile corruption incident on Ubuntu with
-the Firefox snap, the diagnostic steps taken, and the lessons it
-produced for firephlox and for Firefox snap profile maintenance generally.
+Factual record of a Firefox profile corruption incident on Ubuntu with the Firefox snap, the diagnostic steps taken, and the lessons it produced for firephlox and for Firefox snap profile maintenance generally.
 
 ---
 
@@ -13,15 +11,12 @@ produced for firephlox and for Firefox snap profile maintenance generally.
 **Firefox 160 release date:** 2026-11-10 (the day before)
 **Platform:** Ubuntu with Firefox installed via snap
 
-The user reported three concurrent symptoms immediately after a session
-in which a streaming media description was modified while a stream was
-in the process of loading:
+The user reported three concurrent symptoms immediately after a session in which a streaming media description was modified while a stream was in the process of loading:
 
 - A privacy/data-policy consent screen appeared on every new tab and
   browser launch
 - Any attempt to play media – from any source, including local Plex –
-  caused the browser tab to visually freeze (interactive under the hood,
-  not reflected on screen)
+  caused the browser tab to visually freeze (interactive under the hood, not reflected on screen)
 - Hardware acceleration settings could not be changed via the Firefox
   settings UI
 
@@ -30,8 +25,7 @@ in the process of loading:
 ## Environment at the time of the incident
 
 firephlox had been run on this installation prior to the incident.
-The `--restore` flag had also been run at some point, removing the
-enterprise `policies.json` files and the `user.js` managed block.
+The `--restore` flag had also been run at some point, removing the enterprise `policies.json` files and the `user.js` managed block.
 
 Three `snap saved` snapshots existed:
 | Set ID | Age | Version | Notes |
@@ -46,42 +40,34 @@ Three `snap saved` snapshots existed:
 
 ### Databases – all intact
 
-All six core SQLite databases in the broken profile passed integrity
-checks: `permissions.sqlite`, `cookies.sqlite`, `places.sqlite`,
+All six core SQLite databases in the broken profile passed integrity checks: `permissions.sqlite`, `cookies.sqlite`, `places.sqlite`,
 `formhistory.sqlite`, `storage.sqlite`, `favicons.sqlite`.
 
 ### prefs.js – syntax intact but contains firephlox remnants
 
-`prefs.js` contained 386 entries, all syntactically valid. No truncated
-or malformed lines were found.
+`prefs.js` contained 386 entries, all syntactically valid. No truncated or malformed lines were found.
 
-The following value was present and is a known firephlox remnant –
-set by firephlox's `user.js` managed block and persisted in `prefs.js`
-after `user.js` was removed:
+The following value was present and is a known firephlox remnant – set by firephlox's `user.js` managed block and persisted in `prefs.js` after `user.js` was removed:
 
 | Pref key | Value | Source |
 |---|---|---|
 | `xpinstall.signatures.required` | `false` | firephlox user.js managed block |
 
-The following prefs were present and are new Firefox 128+ telemetry IDs
-not covered by the original firephlox policies:
+The following prefs were present and are new Firefox 128+ telemetry IDs not covered by the original firephlox policies:
 
 - `datareporting.dau.cachedUsageProfileGroupID`
 - `datareporting.dau.cachedUsageProfileID`
 
 ### No enterprise policies remained
 
-Both `policies.json` paths were absent at the time of investigation,
-confirming `--restore` had been run before the incident snapshot was
-taken.
+Both `policies.json` paths were absent at the time of investigation, confirming `--restore` had been run before the incident snapshot was taken.
 
 ---
 
 ## Recovery procedure
 
 Snapshot 2 was used as the base (clean profile from the Firefox 153 era).
-Snapshot 6 was used as the donor (broken profile containing the desired
-settings).
+Snapshot 6 was used as the donor (broken profile containing the desired settings).
 
 **Step 1 – Triage snapshot 6:**
 ```sh
@@ -94,8 +80,7 @@ Result: all databases intact, prefs.js syntax intact, one warning
 ```sh
 ./firephlox --restore=6
 ```
-Result: `xpinstall.signatures.required` confirmed as a firephlox-managed
-remnant value in the specimen.
+Result: `xpinstall.signatures.required` confirmed as a firephlox-managed remnant value in the specimen.
 
 **Step 3 – Smart elimination round:**
 ```sh
@@ -189,9 +174,7 @@ Firefox writes GPU detection results to `gfx.*` prefs during its first-launch in
 - **prefs.js** is not JSON – it is a flat sequence of `user_pref("key", value);`
   statements overwritten by Firefox on every clean shutdown.
 - **user.js** is read and applied to prefs.js on every Firefox launch.
-  Removing user.js does not remove the values it previously wrote to
-  prefs.js – those values persist until Firefox overwrites them or they
-  are manually removed.
+  Removing user.js does not remove the values it previously wrote to prefs.js – those values persist until Firefox overwrites them or they are manually removed.
 - **Extension storage** (custom filter rules, settings) lives in
   the IndexedDB tree under `storage/default/`, keyed by extension UUID.
   It is not inside the XPI file.
@@ -210,8 +193,7 @@ Each `.tgz` stores paths relative to the snap's data root
 `common/.mozilla/firefox/<profile>/` inside the tarball.
 
 The tarballs contain symlinks that point to absolute system paths
-(e.g. `.local/share/themes → /usr/share/themes`). These cannot be
-safely extracted and are skipped during firephlox's staging step.
+(e.g. `.local/share/themes → /usr/share/themes`). These cannot be safely extracted and are skipped during firephlox's staging step.
 
 ---
 
@@ -226,10 +208,7 @@ safely extracted and are skipped during firephlox's staging step.
 | `--sign` Task 5 | signed XPI cache | `~/.cache/firephlox/` |
 
 ### What persists after `--restore`
-Running `--restore` removes all the above artefacts. However, values
-previously written to `prefs.js` via `user.js` remain in `prefs.js`
-until Firefox overwrites them. As of the restore step added in this
-investigation, `--restore` now explicitly scrubs those values.
+Running `--restore` removes all the above artefacts. However, values previously written to `prefs.js` via `user.js` remain in `prefs.js` until Firefox overwrites them. As of the restore step added in this investigation, `--restore` now explicitly scrubs those values.
 
 Prefs that firephlox's `user.js` managed block writes to `prefs.js`:
 - `datareporting.healthreport.uploadEnabled = false`
@@ -246,11 +225,7 @@ Prefs that firephlox's `policies.json` locks (and which may remain in
 - `toolkit.telemetry.unified = false`
 
 ### sudo and $HOME
-Running firephlox with `sudo` sets `$HOME` to `/root`, causing all
-user-profile operations (user.js, purge, XPI in profiles) to silently
-skip because no profile is found under `/root/snap/firefox/`. Run
-firephlox as your own user; internal privilege escalation handles the
-system paths.
+Running firephlox with `sudo` sets `$HOME` to `/root`, causing all user-profile operations (user.js, purge, XPI in profiles) to silently skip because no profile is found under `/root/snap/firefox/`. Run firephlox as your own user; internal privilege escalation handles the system paths.
 
 ---
 

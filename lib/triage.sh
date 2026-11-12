@@ -1,9 +1,7 @@
 # shellcheck shell=bash
 # triage.sh — reusable diagnostic primitives for the firephlox triage-kit.
 #
-# Functions defined here are sourced by the main orchestrator alongside
-# colours.sh, common.sh, and titles.sh, making them available to all
-# src/ modules: triage.sh, revive.sh, and eliminate.sh.
+# Functions defined here are sourced by the main orchestrator alongside colours.sh, common.sh, and titles.sh, making them available to all src/ modules: triage.sh, revive.sh, and eliminate.sh.
 #
 #   _fp_triage_sqlite_check <path>
 #       Returns "ok" or an error description for a SQLite database.

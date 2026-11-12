@@ -11,8 +11,7 @@
 #   · apple-music-shuffle@firephlox.xpi from every profile's extensions/ directory
 #   · ~/.cache/firephlox/ (signed XPI cache from Task 5) if present
 #
-# Task 3 (cache purge) removes directories that Firefox recreates on the next
-# launch — there is nothing meaningful to restore there.
+# Task 3 (cache purge) removes directories that Firefox recreates on the next launch — there is nothing meaningful to restore there.
 
 firephlox_restore() {
 	firephlox_section 'Restore · Undo all firephlox changes'
@@ -168,8 +167,7 @@ PYTHON
 }
 
 # firephlox_restore_specimen – run restore cleanup on a staged snapshot.
-# Used by --restore=<id>: stages specimen <id> and reports which
-# firephlox-managed pref values are present in its prefs.js.
+# Used by --restore=<id>: stages specimen <id> and reports which firephlox-managed pref values are present in its prefs.js.
 firephlox_restore_specimen() {
 	local snap_id="${FIREPHLOX_RESTORE_SNAPSHOT}"
 	firephlox_section "Restore · Inspecting specimen ${snap_id} for firephlox remnants"
