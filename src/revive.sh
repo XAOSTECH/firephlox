@@ -441,15 +441,19 @@ _fp_revive_prepare_clone() {
 	firephlox_info 'A clean cultivation always improves the prognosis.'
 }
 
-# Removes all .pre-revive-* backup directories left by previous --backup runs.
+# Removes all .pre-revive-* backup directories and stale staging artefacts.
 firephlox_cleanup() {
-	firephlox_section 'Cleanup · Removing accumulated pre-revive backup directories'
+	firephlox_section 'Cleanup · Clearing accumulated staging and backup artefacts'
 	local -a profiles
 	mapfile -t profiles < <(firephlox_discover_profiles)
 	local base; base="$(dirname "${profiles[0]:-}" 2>/dev/null)"
 	[[ -d "${base}" ]] || firephlox_die 'No Firefox profile directory found.'
-	local count=0 d
+
+	local count=0 total_kb=0 d dir_kb
+
 	while IFS= read -r -d '' d; do
+		dir_kb="$(du -sk "${d}" 2>/dev/null | cut -f1 || printf '0')"
+		total_kb=$(( total_kb + dir_kb ))
 		if firephlox_is_dry_run; then
 			firephlox_info "(dry-run) rm -rf ${d}"
 		else
@@ -458,9 +462,22 @@ firephlox_cleanup() {
 		fi
 		count=$(( count + 1 ))
 	done < <(find "${base}" -maxdepth 1 -name '*.pre-revive-*' -print0 2>/dev/null)
-	[[ "${count}" -eq 0 ]] \
-		&& firephlox_info 'No backup directories found.' \
-		|| firephlox_ok "${count} backup director(y|ies) removed."
+
+	if [[ "${count}" -eq 0 ]]; then
+		firephlox_info 'The ward is already spotless. The patient is in remarkable condition.'
+		return 0
+	fi
+
+	local size_hr
+	if   [[ "${total_kb}" -gt 1048576 ]]; then size_hr="$(( total_kb / 1048576 )) GB"
+	elif [[ "${total_kb}" -gt 1024 ]];    then size_hr="$(( total_kb / 1024 )) MB"
+	else                                        size_hr="${total_kb} KB"
+	fi
+
+	local dir_word; [[ "${count}" -eq 1 ]] && dir_word='directory' || dir_word='directories'
+	printf '\n'
+	firephlox_ok "${count} backup ${dir_word} removed – ${size_hr} returned to the patient."
+	firephlox_info 'Remarkable what a little housekeeping can do for the prognosis.'
 }
 
 # Locates the snapshot ZIP for a given ID in the snapd vault.
