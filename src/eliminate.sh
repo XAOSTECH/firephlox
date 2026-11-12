@@ -43,7 +43,9 @@ firephlox_eliminate() {
 		firephlox_section "Elimination · Standard protocol – specimen ${snap_id} (${#batches[@]} rounds${smart_note})"
 	fi
 	firephlox_info 'Each round adds one batch, revives, and launches Firefox.'
-	firephlox_info 'Close Firefox when done – the protocol will resume automatically.'
+	[[ "${FIREPHLOX_ASSUME_YES:-0}" == '1' ]] \
+		&& firephlox_info '-y active: rounds auto-advance after Firefox closes.' \
+		|| firephlox_info 'Close Firefox when done. Ctrl+C within 5 s to flag the batch as culprit.'
 	printf '\n'
 
 	_fp_elim_run_pass '' "${snap_id}" "${batches[@]}"
@@ -105,11 +107,41 @@ _fp_elim_run_pass() {
 		firefox "${_FP_ELIM_TEST_URL}" &>/dev/null &
 
 		firephlox_info 'Test the scenario (play media, check affected features).'
-		firephlox_info 'Close Firefox when done – the protocol will resume automatically.'
-		while firephlox_firefox_running; do sleep 2; done
+		firephlox_info 'Close Firefox when done.'
+
+		# Wait for Firefox to close. Ctrl+C here also counts as a failure.
+		local ff_interrupted=0
+		trap 'ff_interrupted=1' INT
+		while firephlox_firefox_running && [[ "${ff_interrupted}" -eq 0 ]]; do sleep 2; done
+		trap - INT
+
+		if [[ "${ff_interrupted}" -eq 1 ]]; then
+			firephlox_warn 'Ctrl+C – flagging batch as culprit.'
+			_FP_ELIM_SUSPECT="${batch}"
+			return 0
+		fi
 		firephlox_info 'Firefox closed.'
 
-		if firephlox_confirm "Round ${round} – did Firefox work correctly?"; then
+		# Determine pass/fail: countdown with Ctrl+C, or auto-advance with -y.
+		local passed=0
+		if [[ "${FIREPHLOX_ASSUME_YES:-0}" == '1' ]]; then
+			passed=1
+		else
+			local interrupted=0
+			trap 'interrupted=1' INT
+			local i
+			for i in 5 4 3 2 1; do
+				printf '\r%s[ .. ]%s  Advancing in %d s – Ctrl+C to flag culprit  ' \
+					"${FP_BLUE}" "${FP_RESET}" "${i}"
+				sleep 1
+				[[ "${interrupted}" -eq 1 ]] && break
+			done
+			printf '\n'
+			trap - INT
+			[[ "${interrupted}" -eq 0 ]] && passed=1
+		fi
+
+		if [[ "${passed}" -eq 1 ]]; then
 			firephlox_ok "Round ${round} passed – batch not culpable: ${batch}"
 			included="${test_prefs}"
 			_FP_ELIM_SAFE="${included}"
