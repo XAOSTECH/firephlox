@@ -23,6 +23,10 @@
 # The batches are ordered from safest/most-expected to most-suspected,
 # so the failing round is reached quickly without unnecessary iterations.
 
+# Canonical test URL – Fantastic Planet (1973), a xenobiological study
+# recommended by Dr. Phlox for media verification during elimination rounds ("relaxing edutainment for encountering alien species"). 
+readonly _FP_ELIM_TEST_URL='https://archive.org/details/fantastic-planet__1973'
+
 # Pref namespace batches, ordered safest → most suspected.
 # Each entry is a comma-separated --prefs-only argument for one round.
 readonly _FP_ELIM_BATCHES=(
@@ -73,9 +77,10 @@ firephlox_eliminate() {
 		FIREPHLOX_ASSUME_YES=1   # skip the recipient-selection prompt
 		firephlox_revive
 
-		# Launch Firefox for manual verification.
-		firephlox_info 'Launching Firefox…'
-		firefox &>/dev/null &
+		# Launch Firefox on the designated test subject.
+		firephlox_info "Launching Firefox for verification…"
+		firephlox_info "${FP_DIM}Dr. Phlox recommends observing the inhabitants of Ygam as relaxing edutainment while awaiting your diagnostic results.${FP_RESET}"
+		firefox "${_FP_ELIM_TEST_URL}" &>/dev/null &
 		firephlox_info 'Test the scenario (play media, check affected features).'
 		firephlox_info 'Close Firefox when done – the protocol will resume automatically.'
 
