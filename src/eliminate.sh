@@ -32,37 +32,51 @@ firephlox_eliminate() {
 		firephlox_die 'Firefox is currently running. Close it before the elimination protocol.'
 	fi
 
-	local -a batches=()
-	if [[ "${FIREPHLOX_ELIMINATE_FULL:-0}" == '1' ]]; then
-		_fp_elim_expand batches "${_FP_ELIM_BATCHES[@]}"
-		firephlox_section "Elimination · Full protocol – specimen ${snap_id} (${#batches[@]} rounds)"
-	else
-		batches=("${_FP_ELIM_BATCHES[@]}")
-		local smart_note=''
-		[[ "${FIREPHLOX_ELIMINATE_SMART:-0}" == '1' ]] && smart_note=' + smart sub-pass on culprit'
-		firephlox_section "Elimination · Standard protocol – specimen ${snap_id} (${#batches[@]} rounds${smart_note})"
-	fi
+	local culprits_target="${FIREPHLOX_ELIMINATE_CULPRITS:-1}"
+	local -a all_culprits=()
+	# Start with any pre-known culprits supplied via --exclude.
+	local running_exclude="${FIREPHLOX_REVIVE_EXCLUDE:-}"
 
-	# --exclude skips pre-known culprit terms from the batch list so the
-	# protocol can find a second (or later) pathogen without re-testing known bad ones.
-	if [[ -n "${FIREPHLOX_REVIVE_EXCLUDE:-}" ]]; then
-		firephlox_warn "Pre-known culprits excluded: ${FIREPHLOX_REVIVE_EXCLUDE}"
-		local -a filtered=()
-		local b term skip_term in_skip keep
-		for b in "${batches[@]}"; do
-			keep=''
-			local IFS=','
-			for term in ${b}; do
-				in_skip=0
-				for skip_term in ${FIREPHLOX_REVIVE_EXCLUDE}; do
-					[[ "${term}" == "${skip_term}" ]] && in_skip=1 && break
+	local pass=0
+	while [[ "${#all_culprits[@]}" -lt "${culprits_target}" ]]; do
+		pass=$(( pass + 1 ))
+		[[ "${pass}" -gt 1 ]] && \
+			firephlox_section "Elimination · Pass ${pass} – searching for pathogen ${pass}/${culprits_target}"
+
+		# Temporarily inject running exclusions so the batch-filter logic picks them up.
+		FIREPHLOX_REVIVE_EXCLUDE="${running_exclude}"
+
+		local -a batches=()
+		if [[ "${FIREPHLOX_ELIMINATE_FULL:-0}" == '1' ]]; then
+			_fp_elim_expand batches "${_FP_ELIM_BATCHES[@]}"
+			firephlox_section "Elimination · Full protocol – specimen ${snap_id} (${#batches[@]} rounds)"
+		else
+			batches=("${_FP_ELIM_BATCHES[@]}")
+			local smart_note=''
+			[[ "${FIREPHLOX_ELIMINATE_SMART:-0}" == '1' ]] && smart_note=' + smart sub-pass on culprit'
+			firephlox_section "Elimination · Standard protocol – specimen ${snap_id} (${#batches[@]} rounds${smart_note})"
+		fi
+
+		# --exclude skips pre-known culprit terms from the batch list so the
+		# protocol can find a second (or later) pathogen without re-testing known bad ones.
+		if [[ -n "${running_exclude}" ]]; then
+			firephlox_warn "Pre-known culprits excluded: ${running_exclude}"
+			local -a filtered=()
+			local b term skip_term in_skip keep
+			for b in "${batches[@]}"; do
+				keep=''
+				local IFS=','
+				for term in ${b}; do
+					in_skip=0
+					for skip_term in ${running_exclude}; do
+						[[ "${term}" == "${skip_term}" ]] && in_skip=1 && break
+					done
+					[[ "${in_skip}" -eq 0 ]] && keep="${keep:+${keep},}${term}"
 				done
-				[[ "${in_skip}" -eq 0 ]] && keep="${keep:+${keep},}${term}"
+				[[ -n "${keep}" ]] && filtered+=("${keep}")
 			done
-			[[ -n "${keep}" ]] && filtered+=("${keep}")
-		done
-		batches=("${filtered[@]}")
-	fi
+			batches=("${filtered[@]}")
+		fi
 	firephlox_info 'Each round adds one batch, revives, and launches Firefox.'
 	[[ "${FIREPHLOX_ASSUME_YES:-0}" == '1' ]] \
 		&& firephlox_info '-y active: rounds auto-advance after Firefox closes.' \
@@ -83,35 +97,53 @@ firephlox_eliminate() {
 		safe="${_FP_ELIM_SAFE}"
 	fi
 
+	if [[ -z "${suspect}" ]]; then
+		firephlox_ok "Pass ${pass}: no culprit found – remaining batches appear safe."
+		break
+	fi
+
+	all_culprits+=("${suspect}")
+	running_exclude="${running_exclude:+${running_exclude},}${suspect}"
+
+	if [[ "${#all_culprits[@]}" -lt "${culprits_target}" ]]; then
+		firephlox_ok "Pathogen ${#all_culprits[@]}/${culprits_target} identified: ${suspect}. Re-running to find the next."
+	fi
+	done  # end while
+
 	printf '\n'
 	firephlox_section 'Elimination · Conclusion'
-	if [[ -n "${suspect}" ]]; then
-		firephlox_error "Culprit namespace: ${suspect}"
-		firephlox_info  "Confirmed safe (this run): ${safe:-none}"
-
-		# Build the full "everything minus culprit" recommendation by expanding
-		# all standard batches and removing every term that is in the suspect.
-		local -a all_terms=()
-		_fp_elim_expand all_terms "${_FP_ELIM_BATCHES[@]}"
-		local -a suspect_terms=()
-		_fp_elim_expand suspect_terms "${suspect}"
-		local -a safe_all=()
-		local t s is_s
-		for t in "${all_terms[@]}"; do
-			is_s=0
-			for s in "${suspect_terms[@]}"; do
-				[[ "${t}" == "${s}" ]] && is_s=1 && break
-			done
-			[[ "${is_s}" -eq 0 ]] && safe_all+=("${t}")
-		done
-		local all_safe_csv; all_safe_csv="$(IFS=','; printf '%s' "${safe_all[*]}")"
-
-		firephlox_ok  "To revive with everything except the culprit:"
-		firephlox_info "  ./firephlox --revive=${snap_id} --fresh --prefs-only=${all_safe_csv}"
-		firephlox_info "To search for a second pathogen, re-run with the culprit excluded:"
-		firephlox_info "  ./firephlox --eliminate=${snap_id} --smart --exclude=${suspect}"
-	else
+	if [[ "${#all_culprits[@]}" -eq 0 ]]; then
 		firephlox_ok 'All batches passed – the full pref transplant appears safe for this specimen.'
+		return 0
+	fi
+
+	local culprit_csv; culprit_csv="$(IFS=','; printf '%s' "${all_culprits[*]}")"
+	local c
+	for c in "${all_culprits[@]}"; do
+		firephlox_error "Pathogen confirmed: ${c}"
+	done
+
+	# Build the full "all terms minus all culprits" recommendation.
+	local -a all_terms=()
+	_fp_elim_expand all_terms "${_FP_ELIM_BATCHES[@]}"
+	local -a culprit_terms=()
+	_fp_elim_expand culprit_terms "${all_culprits[@]}"
+	local -a safe_all=()
+	local t s is_s
+	for t in "${all_terms[@]}"; do
+		is_s=0
+		for s in "${culprit_terms[@]}"; do
+			[[ "${t}" == "${s}" ]] && is_s=1 && break
+		done
+		[[ "${is_s}" -eq 0 ]] && safe_all+=("${t}")
+	done
+	local all_safe_csv; all_safe_csv="$(IFS=','; printf '%s' "${safe_all[*]}")"
+
+	firephlox_ok  "To revive with everything except the pathogen(s):"
+	firephlox_info "  ./firephlox --revive=${snap_id} --fresh --prefs-only=${all_safe_csv}"
+	if [[ "${#all_culprits[@]}" -lt "${culprits_target}" ]]; then
+		firephlox_info "To search for another pathogen:"
+		firephlox_info "  ./firephlox --eliminate=${snap_id} --smart --exclude=${culprit_csv}"
 	fi
 }
 
