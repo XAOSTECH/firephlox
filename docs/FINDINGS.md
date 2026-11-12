@@ -97,16 +97,43 @@ Result: all databases intact, prefs.js syntax intact, one warning
 Result: `xpinstall.signatures.required` confirmed as a firephlox-managed
 remnant value in the specimen.
 
-**Step 3 – Full revive with fresh clone:**
+**Step 3 – Smart elimination round:**
 ```sh
-./firephlox --revive=6 --fresh
+./firephlox --eliminate=6 --smart
 ```
-Result: 345 of 386 prefs transplanted (41 excluded by the standard
-filter). All databases, extensions, and extension storage transplanted.
-Video playback restored. Cookie exception list retained.
+Result: Only one culprit was suspected, but culprits=N or reruns with --exclude can be used for those. Smart elimination round introduced prefs in ever decreasing batches until culprit was confirmed with test failure.
 
-**Confirmed working:** video playback and cookie exceptions after the
-345-pref transplant.
+**Confirmed culprit:** gfx
+
+**Step 4 – Revive with all prefs except confirmed culprit:**
+```sh
+./firephlox --revive=6 --fresh --prefs-only=browser,network,dom,security,layout,extensions,privacy,signon,services,app,widget,doh-rollout,distribution,media.videocontrols,media.block,media.autoplay,media.suspend-bkgnd-video,media.peerconnection,media.gmp,media.eme,media.gmp-widevinecdm,toolkit,datareporting
+```
+Result: working. This confirmed that every namespace from the broken snapshot is safe except `gfx`.
+
+---
+
+## Root cause: `gfx.*` namespace
+
+The `gfx.*` namespace is Firefox's graphics and rendering configuration store. These prefs record the results of Firefox's GPU capability probe: which rendering pipeline to use (WebRender or legacy), which compositor path, which canvas backend, and which GPU features are available. Firefox writes these automatically on first launch, re-reads them on every subsequent startup, and uses them to skip the hardware probe.
+
+**Why a stale `gfx.*` pref causes these specific symptoms:**
+
+The Firefox snap runs with an AppArmor profile that limits GPU access to specific interfaces. If a `gfx.*` pref describes a GPU rendering path that is unavailable in the current snap context – because the snap revision changed, the system GPU driver changed, or the pref was written during an interrupted initialisation – Firefox does not fall back gracefully when it encounters the missing resource. The GPU compositor thread blocks waiting for a resource that never responds.
+
+| Symptom | Mechanism |
+|---|---|
+| Visual freeze with underlying interactivity | CPU processes (JS, input) continue; the GPU compositor thread is blocked and cannot push new frames to screen |
+| Media hang specifically | Media decode succeeds; the compositor cannot render the decoded frames. The hang occurs at the display layer, not the decode layer |
+| Hardware acceleration setting not sticking | A `gfx.*` pref locking Firefox to a specific rendering mode overrides the UI checkbox (`layers.acceleration.disabled`) regardless of what `about:config` shows |
+
+**Why `media.gmp.*` was not the culprit (despite early suspicion):**
+
+The `media.gmp.*` prefs control the codec layer: which GMP binary to use, its hash, and its version. The GMP was intact and successfully fetched and decoded media. The failure was one layer higher: compositing the decoded frames to the display surface. That layer belongs to `gfx.*` exclusively. `media.gmp.*` exclusion in earlier tests did not resolve the issue because the problem was never in the codec.
+
+**When this type of corruption occurs:**
+
+Firefox writes GPU detection results to `gfx.*` prefs during its first-launch initialisation cycle. If that cycle is interrupted (browser crash, OS event, concurrent writes from a simultaneous browser event such as a media stream initialisation), the prefs may describe a GPU state that is inconsistent or that references a capability that is not reachable in the sandbox. On the next launch Firefox reads those prefs, attempts to initialise the described GPU path, and hangs.
 
 ---
 
@@ -114,6 +141,7 @@ Video playback restored. Cookie exception list retained.
 
 | Excluded namespace | Reason |
 |---|---|
+| `gfx.*` | GPU rendering configuration – written during Firefox's hardware probe; describes GPU paths that may be unavailable in the snap sandbox. **Confirmed culprit in this incident.** |
 | `datareporting.*` | Telemetry reporting control prefs |
 | `toolkit.telemetry.*` | Telemetry framework – includes installation UUIDs |
 | `media.gmp-*` | Codec binary hashes and version strings tied to the installed snap revision; transplanting a mismatched hash can cause decoder failures |
