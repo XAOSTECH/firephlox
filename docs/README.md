@@ -1,5 +1,11 @@
 # firephlox
 
+<p align="center">
+  <a href="https://github.com/XAOSTECH/firephlox"><img alt="GitHub repo" src="https://img.shields.io/badge/GitHub-XAOSTECH%2Ffirephlox-181717?style=for-the-badge&logo=github"></a>
+  <a href="https://github.com/XAOSTECH/firephlox/releases"><img alt="GitHub release" src="https://img.shields.io/github/v/release/XAOSTECH/firephlox?style=for-the-badge&logo=semantic-release&color=blue"></a>
+  <a href="https://github.com/XAOSTECH/firephlox/blob/main/LICENSE"><img alt="Licence" src="https://img.shields.io/badge/licence-GPL--3.0-green?style=for-the-badge"></a>
+</p>
+
 <p align="center"><img src="../assets/icon.png" width="220" alt="Dr. Phlox emblem – Have No Fear, Phlox Is Here!"></p>
 
 Surgery for the Snap-confined Firefox browser on Ubuntu. Named after Dr. Phlox of *Star Trek: Enterprise* — precise, targeted, and always optimistic about the patient's prognosis.
