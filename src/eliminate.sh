@@ -44,8 +44,23 @@ firephlox_eliminate() {
 	[[ -n "${snap_id}" ]] || \
 		firephlox_die 'No specimen ID given. Usage: --eliminate=<id>  (run: snap saved firefox)'
 
-	firephlox_section "Elimination · Progressive pref-namespace test for specimen ${snap_id}"
-	firephlox_info 'Each round adds one namespace batch, revives, and launches Firefox.'
+	# Build the active batch list from the standard batches.
+	# --full splits every comma-separated batch into individual rounds.
+	local -a batches=()
+	if [[ "${FIREPHLOX_ELIMINATE_FULL:-0}" == '1' ]]; then
+		local b term
+		for b in "${_FP_ELIM_BATCHES[@]}"; do
+			local IFS=','
+			for term in ${b}; do
+				[[ -n "${term}" ]] && batches+=("${term}")
+			done
+		done
+		firephlox_section "Elimination · Full protocol for specimen ${snap_id} (${#batches[@]} rounds)"
+	else
+		batches=("${_FP_ELIM_BATCHES[@]}")
+		firephlox_section "Elimination · Standard protocol for specimen ${snap_id} (${#batches[@]} rounds)"
+	fi
+	firephlox_info 'Each round adds one batch, revives, and launches Firefox.'
 	firephlox_info 'The round whose batch causes a regression identifies the culprit.'
 	printf '\n'
 
@@ -53,12 +68,12 @@ firephlox_eliminate() {
 		firephlox_die 'Firefox is currently running. Close it before the elimination protocol.'
 	fi
 
-	local included=''   # pref namespaces confirmed safe so far
-	local suspect=''    # batch that caused a failure
+	local included=''
+	local suspect=''
 	local round=0
 
 	local batch
-	for batch in "${_FP_ELIM_BATCHES[@]}"; do
+	for batch in "${batches[@]}"; do
 		round=$(( round + 1 ))
 		firephlox_section "Elimination round ${round} · Adding: ${batch}"
 
