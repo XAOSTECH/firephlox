@@ -420,14 +420,47 @@ _fp_revive_excluded() {
 _fp_revive_prepare_clone() {
 	local dst_profile="$1"
 	firephlox_section 'Revive 3B · Preparing the clone — sterilising the recipient site'
-	local backup="${dst_profile}.pre-revive-$(date +%Y%m%d%H%M%S)"
-	mkdir -p "${backup}"
-	local entry moved=0
-	while IFS= read -r -d '' entry; do
-		mv "${entry}" "${backup}/" 2>/dev/null && moved=$(( moved + 1 )) || true
-	done < <(find "${dst_profile}" -mindepth 1 -maxdepth 1 -print0 2>/dev/null)
-	firephlox_ok "${moved} item(s) archived to: $(basename "${backup}")"
+
+	if [[ "${FIREPHLOX_BACKUP:-0}" == '1' ]]; then
+		# Archive mode (--backup): move contents to a dated backup directory.
+		# Note: this accumulates disk space with repeated runs (e.g. --eliminate).
+		local backup="${dst_profile}.pre-revive-$(date +%Y%m%d%H%M%S)"
+		mkdir -p "${backup}"
+		local entry moved=0
+		while IFS= read -r -d '' entry; do
+			mv "${entry}" "${backup}/" 2>/dev/null && moved=$(( moved + 1 )) || true
+		done < <(find "${dst_profile}" -mindepth 1 -maxdepth 1 -print0 2>/dev/null)
+		firephlox_ok "${moved} item(s) archived to: $(basename "${backup}")"
+	else
+		# Default: wipe the profile contents. The snap data snapshot is the
+		# authoritative backup; local archive directories are not needed.
+		find "${dst_profile}" -mindepth 1 -maxdepth 1 \
+			-exec rm -rf {} + 2>/dev/null || true
+		firephlox_ok 'Recipient site sterilised.'
+	fi
 	firephlox_info 'A clean cultivation always improves the prognosis.'
+}
+
+# Removes all .pre-revive-* backup directories left by previous --backup runs.
+firephlox_cleanup() {
+	firephlox_section 'Cleanup · Removing accumulated pre-revive backup directories'
+	local -a profiles
+	mapfile -t profiles < <(firephlox_discover_profiles)
+	local base; base="$(dirname "${profiles[0]:-}" 2>/dev/null)"
+	[[ -d "${base}" ]] || firephlox_die 'No Firefox profile directory found.'
+	local count=0 d
+	while IFS= read -r -d '' d; do
+		if firephlox_is_dry_run; then
+			firephlox_info "(dry-run) rm -rf ${d}"
+		else
+			rm -rf -- "${d}"
+			firephlox_ok "Removed: $(basename "${d}")"
+		fi
+		count=$(( count + 1 ))
+	done < <(find "${base}" -maxdepth 1 -name '*.pre-revive-*' -print0 2>/dev/null)
+	[[ "${count}" -eq 0 ]] \
+		&& firephlox_info 'No backup directories found.' \
+		|| firephlox_ok "${count} backup director(y|ies) removed."
 }
 
 # Locates the snapshot ZIP for a given ID in the snapd vault.

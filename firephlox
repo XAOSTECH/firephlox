@@ -58,6 +58,8 @@ FIREPHLOX_ELIMINATE_FULL=0
 FIREPHLOX_ELIMINATE_SMART=0
 FIREPHLOX_REVIVE_EXCLUDE=''
 FIREPHLOX_PREFS_ONLY=''
+FIREPHLOX_BACKUP=0
+FIREPHLOX_CLEANUP=0
 FIREPHLOX_FRESH=0
 
 usage() {
@@ -77,7 +79,9 @@ Options:
       --eliminate=<id> Progressive pref-namespace elimination test.
       --full           With --eliminate: one term per round (maximum precision).
       --smart          With --eliminate: grouped pass, then auto-splits the culprit batch.
-      --fresh       With --revive: cultivate a fresh clone (archive current profile first).
+      --fresh       With --revive: cultivate a fresh clone (wipe current profile first).
+      --backup      With --revive --fresh: archive the wiped profile to .pre-revive-* instead of deleting it.
+      --cleanup     Remove all .pre-revive-* backup directories left by previous --backup runs.
       --exclude=    With --revive: comma-separated list of categories to skip during transplant.
                     Categories: sqlite, credentials, config, extensions, prefs
                     Example: --exclude=extensions,prefs
@@ -119,6 +123,8 @@ parse_args() {
 			--full)           FIREPHLOX_ELIMINATE_FULL=1 ;;
 			--smart)          FIREPHLOX_ELIMINATE_SMART=1 ;;
 			--fresh)        FIREPHLOX_FRESH=1 ;;
+			--backup)       FIREPHLOX_BACKUP=1 ;;
+			--cleanup)      FIREPHLOX_CLEANUP=1 ;;
 			--exclude=*)    FIREPHLOX_REVIVE_EXCLUDE="${1#*=}" ;;
 			--prefs-only=*) FIREPHLOX_PREFS_ONLY="${1#*=}" ;;
 			--no-purge)     FIREPHLOX_SKIP_PURGE=1 ;;
@@ -151,7 +157,7 @@ main() {
 		source "${module}"
 	done
 
-	export FIREPHLOX_DRY_RUN FIREPHLOX_ASSUME_YES FIREPHLOX_SKIP_PURGE FIREPHLOX_SKIP_SHUFFLE FIREPHLOX_SIGN FIREPHLOX_AMO_KEY FIREPHLOX_AMO_SECRET FIREPHLOX_SIGNED_XPI FIREPHLOX_RESTORE FIREPHLOX_RESTORE_SNAPSHOT FIREPHLOX_TRIAGE FIREPHLOX_TRIAGE_SNAPSHOT FIREPHLOX_REVIVE_SNAPSHOT FIREPHLOX_FRESH FIREPHLOX_REVIVE_EXCLUDE FIREPHLOX_PREFS_ONLY FIREPHLOX_ELIMINATE_SNAPSHOT FIREPHLOX_ELIMINATE_FULL FIREPHLOX_ELIMINATE_SMART
+	export FIREPHLOX_DRY_RUN FIREPHLOX_ASSUME_YES FIREPHLOX_SKIP_PURGE FIREPHLOX_SKIP_SHUFFLE FIREPHLOX_SIGN FIREPHLOX_AMO_KEY FIREPHLOX_AMO_SECRET FIREPHLOX_SIGNED_XPI FIREPHLOX_RESTORE FIREPHLOX_RESTORE_SNAPSHOT FIREPHLOX_TRIAGE FIREPHLOX_TRIAGE_SNAPSHOT FIREPHLOX_REVIVE_SNAPSHOT FIREPHLOX_FRESH FIREPHLOX_BACKUP FIREPHLOX_REVIVE_EXCLUDE FIREPHLOX_PREFS_ONLY FIREPHLOX_ELIMINATE_SNAPSHOT FIREPHLOX_ELIMINATE_FULL FIREPHLOX_ELIMINATE_SMART FIREPHLOX_CLEANUP
 
 	firephlox_banner
 	firephlox_is_dry_run && firephlox_warn 'DRY-RUN mode: no files will be written or deleted.'
@@ -167,6 +173,11 @@ main() {
 
 	if [[ "${FIREPHLOX_TRIAGE}" == '1' ]]; then
 		firephlox_triage
+		return
+	fi
+
+	if [[ "${FIREPHLOX_CLEANUP}" == '1' ]]; then
+		firephlox_cleanup
 		return
 	fi
 
