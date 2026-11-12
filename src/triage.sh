@@ -20,7 +20,9 @@ firephlox_triage() {
 		if firephlox_firefox_running; then
 			firephlox_die 'Firefox is currently running. Close it before triaging a snapshot.'
 		fi
-		local stage_dir; stage_dir="$(mktemp -d)"
+		local _fp_cache="${HOME}/.cache/firephlox"
+		mkdir -p "${_fp_cache}"
+		local stage_dir; stage_dir="$(mktemp -d -p "${_fp_cache}" stage.XXXXXXXX)"
 		# shellcheck disable=SC2064
 		trap "rm -rf -- '${stage_dir}'" RETURN EXIT
 		_fp_stage_snapshot "${snap_id}" "${stage_dir}"
