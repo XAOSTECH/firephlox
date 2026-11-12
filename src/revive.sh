@@ -4,10 +4,7 @@
 #   "My people believe that the bond between patient and physician is sacred.
 #    I will not leave you." — Dr. Phlox
 #
-# Non-destructively extracts a snap saved snapshot ZIP, locates the Firefox
-# profile inside it, assesses each data category for viability, then
-# transplants everything salvageable into the active profile. The source
-# snapshot is never modified or deleted.
+# Non-destructively extracts a snap saved snapshot ZIP, locates the Firefox profile inside it, assesses each data category for viability, then transplants everything salvageable into the active profile. The source snapshot is never modified or deleted.
 #
 # What is transplanted (all categories pass a viability assessment first):
 #   · SQLite databases: permissions, cookies, places (bookmarks+history),
@@ -68,8 +65,7 @@ firephlox_revive() {
 	_fp_stage_snapshot "${snap_id}" "${stage_dir}"
 	local src_profile="${_FP_STAGED_PROFILE}"
 
-	# Check for findings from a prior --triage=<id> run and apply any
-	# recommended exclusions that the user has not already overridden.
+	# Check for findings from a prior --triage=<id> run and apply any recommended exclusions that the user has not already overridden.
 	local findings_file="${HOME}/.cache/firephlox/triage-${snap_id}.findings"
 	if [[ -f "${findings_file}" ]]; then
 		firephlox_info "Findings file found from prior --triage=${snap_id}:"
@@ -323,8 +319,7 @@ firephlox_revive() {
 
 # _fp_stage_snapshot <snap_id> <stage_dir>
 # Locates, copies, and fully unpacks a snap data snapshot into stage_dir.
-# Sets _FP_STAGED_PROFILE to the absolute path of the Firefox profile found
-# inside the staged data. Called by both firephlox_triage and firephlox_revive.
+# Sets _FP_STAGED_PROFILE to the absolute path of the Firefox profile found inside the staged data. Called by both firephlox_triage and firephlox_revive.
 _fp_stage_snapshot() {
 	local snap_id="$1" stage_dir="$2"
 
@@ -417,8 +412,7 @@ _fp_revive_excluded() {
 }
 
 # Archives the current profile and leaves the directory empty in place.
-# Firefox re-initialises all missing files on the next launch; profiles.ini
-# is untouched because the directory itself remains.
+# Firefox re-initialises all missing files on the next launch; profiles.ini is untouched because the directory itself remains.
 _fp_revive_prepare_clone() {
 	local dst_profile="$1"
 	firephlox_section 'Revive 3B · Preparing the clone — sterilising the recipient site'
@@ -434,8 +428,7 @@ _fp_revive_prepare_clone() {
 		done < <(find "${dst_profile}" -mindepth 1 -maxdepth 1 -print0 2>/dev/null)
 		firephlox_ok "${moved} item(s) archived to: $(basename "${backup}")"
 	else
-		# Default: wipe the profile contents. The snap data snapshot is the
-		# authoritative backup; local archive directories are not needed.
+		# Default: wipe the profile contents. The snap data snapshot is the authoritative backup; local archive directories are not needed.
 		find "${dst_profile}" -mindepth 1 -maxdepth 1 \
 			-exec rm -rf {} + 2>/dev/null || true
 		firephlox_ok 'Recipient site sterilised.'
@@ -467,9 +460,7 @@ firephlox_cleanup() {
 		count=$(( count + 1 ))
 	done < <(find "${base}" -maxdepth 1 -name '*.pre-revive-*' -print0 2>/dev/null)
 
-	# Stale staging directories left behind in the cache area (e.g. from an
-	# interrupted extraction). These are ephemeral by design – no other
-	# contents in ~/.cache/firephlox/ match the stage.* prefix.
+	# Stale staging directories left behind in the cache area (e.g. from an interrupted extraction). These are ephemeral by design – no other contents in ~/.cache/firephlox/ match the stage.* prefix.
 	if [[ -d "${cache}" ]]; then
 		while IFS= read -r -d '' d; do
 			dir_kb="$(du -sk "${d}" 2>/dev/null | cut -f1 || printf '0')"
@@ -502,11 +493,8 @@ firephlox_cleanup() {
 }
 
 # Locates the snapshot ZIP for a given ID in the snapd vault.
-# Lists the vault directory rather than glob-expanding inside it — bash
-# cannot expand a glob inside a root-owned directory, which would cause
-# the literal unexpanded pattern to be passed through even with sudo.
-# Uses if/fi (not [[ ]] &&) so the function always exits 0 and set -e
-# does not trigger when no match is found.
+# Lists the vault directory rather than glob-expanding inside it — bash cannot expand a glob inside a root-owned directory, which would cause the literal unexpanded pattern to be passed through even with sudo.
+# Uses if/fi (not [[ ]] &&) so the function always exits 0 and set -e does not trigger when no match is found.
 _fp_revive_find_zip() {
 	local snap_id="$1"
 	local vault='/var/lib/snapd/snapshots'
@@ -518,8 +506,7 @@ _fp_revive_find_zip() {
 	fi
 }
 
-# Finds a named file inside the staged snapshot. No path filter needed —
-# this tool only handles Firefox snapshots, so any match is the right file.
+# Finds a named file inside the staged snapshot. No path filter needed — this tool only handles Firefox snapshots, so any match is the right file.
 _fp_revive_find_in_stage() {
 	local stage_dir="$1" filename="$2"
 	find "${stage_dir}" -name "${filename}" 2>/dev/null | head -1 || true
@@ -558,8 +545,7 @@ _fp_revive_xplant_file() {
 }
 
 # Transplants selected preferences from prefs.js into the destination user.js.
-# Excluded: firephlox-managed prefs, known-problematic prefs, telemetry,
-# sync credentials, and any value referencing a filesystem path.
+# Excluded: firephlox-managed prefs, known-problematic prefs, telemetry, sync credentials, and any value referencing a filesystem path.
 _fp_revive_xplant_prefs() {
 	local src_prefs="$1" dst_userjs="$2"
 	local count
@@ -591,8 +577,7 @@ EXCLUDED_EXACT = frozenset({
     'privacy.resistFingerprinting',
 })
 # Firephlox-locked values – zeroed UUIDs, redirected servers, etc.
-# Never transplant these; they would re-lock values in the destination
-# and require another restore cycle to undo.
+# Never transplant these; they would re-lock values in the destination and require another restore cycle to undo.
 FIREPHLOX_LOCKED = {
     'toolkit.telemetry.cachedClientID':                       '"00000000-0000-0000-0000-000000000000"',
     'browser.newtabpage.activity-stream.impressionId':         '"{}"',

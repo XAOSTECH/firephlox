@@ -7,8 +7,7 @@
 # Without a snapshot ID: inspects the active Firefox profile.
 # With --triage=<id>:    stages the named snap data snapshot and triages it.
 #
-# Shared helpers (_fp_triage_sqlite_check, _fp_triage_pref) are also called
-# by 10_revive.sh, which is sourced after this module.
+# Shared helpers (_fp_triage_sqlite_check, _fp_triage_pref) are also called by 10_revive.sh, which is sourced after this module.
 
 firephlox_triage() {
 	local snap_id="${FIREPHLOX_TRIAGE_SNAPSHOT:-}"
@@ -99,8 +98,7 @@ firephlox_triage() {
 		[[ "${dup_count}" -gt 0 ]] && \
 			firephlox_warn "Conflicting neural pathways: ${dup_count} duplicate pref keys detected."
 
-		# Syntax validation — a partial write (e.g. from a crash mid-stream)
-		# leaves truncated or malformed lines that cause non-obvious runtime failures.
+		# Syntax validation — a partial write (e.g. from a crash mid-stream) leaves truncated or malformed lines that cause non-obvious runtime failures.
 		local syntax_errors
 		syntax_errors="$(python3 - "${prefs}" <<'PYTHON' 2>/dev/null || true
 import re, sys
@@ -223,8 +221,7 @@ print(len(json.load(open('${ext_json}')).get('addons', [])))
 	firephlox_info 'To salvage settings from a snapshot: ./firephlox --revive=<snapshot-id>'
 	firephlox_info 'Run: snap saved firefox  to list available specimens.'
 
-	# When triaging a snapshot, write a findings file so revive can
-	# automatically apply any exclusion recommendations.
+	# When triaging a snapshot, write a findings file so revive can automatically apply any exclusion recommendations.
 	if [[ -n "${snap_id}" ]]; then
 		_fp_triage_write_findings "${snap_id}" "${profile}"
 	fi
