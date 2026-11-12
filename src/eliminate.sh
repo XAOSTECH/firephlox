@@ -10,7 +10,7 @@
 #   ./firephlox --eliminate=<id> --smart   smart     – grouped pass, then
 #                                                      auto-splits the culprit
 
-readonly _FP_ELIM_TEST_URL='https://archive.org/details/fantastic__planet1973'
+readonly _FP_ELIM_TEST_URL='https://archive.org/details/fantastic-planet__1973'
 
 # Standard batches, ordered safest → most suspected.
 readonly _FP_ELIM_BATCHES=(
@@ -102,20 +102,31 @@ _fp_elim_run_pass() {
 		firephlox_revive
 
 		firephlox_info 'Launching Firefox…'
-		firephlox_info "${FP_DIM}Dr. Phlox recommends observing the inhabitants of Ygam"
-		firephlox_info "as relaxing edutainment while awaiting your diagnostic results.${FP_RESET}"
+		firephlox_info "${FP_DIM}Dr. Phlox recommends observing the inhabitants of Ygam as relaxing edutainment while awaiting your diagnostic results.${FP_RESET}"
 		firefox "${_FP_ELIM_TEST_URL}" &>/dev/null &
+
+		# The snap Firefox takes several seconds to initialise. Wait for the process to appear before entering the close-wait loop.
+		local startup=0
+		until firephlox_firefox_running || [[ "${startup}" -ge 15 ]]; do
+			sleep 1 || true
+			startup=$(( startup + 1 ))
+		done
+		if [[ "${startup}" -ge 15 ]]; then
+			firephlox_warn 'Firefox did not start within 15 seconds – check snap status.'
+		fi
 
 		firephlox_info 'Test the scenario (play media, check affected features).'
 		firephlox_info 'Close Firefox when done.'
 
 		# Wait for Firefox to close. Ctrl+C here also counts as a failure.
+		# sleep is guarded with || true because set -e would otherwise exit the script when sleep is interrupted by SIGINT (exits with status 130).
 		local ff_interrupted=0
 		trap 'ff_interrupted=1' INT
-		while firephlox_firefox_running && [[ "${ff_interrupted}" -eq 0 ]]; do sleep 2; done
+		while firephlox_firefox_running && [[ "${ff_interrupted}" -eq 0 ]]; do sleep 2 || true; done
 		trap - INT
 
 		if [[ "${ff_interrupted}" -eq 1 ]]; then
+			printf '\n'
 			firephlox_warn 'Ctrl+C – flagging batch as culprit.'
 			_FP_ELIM_SUSPECT="${batch}"
 			return 0
@@ -133,7 +144,7 @@ _fp_elim_run_pass() {
 			for i in 5 4 3 2 1; do
 				printf '\r%s[ .. ]%s  Advancing in %d s – Ctrl+C to flag culprit  ' \
 					"${FP_BLUE}" "${FP_RESET}" "${i}"
-				sleep 1
+				sleep 1 || true   # || true: set -e must not exit on SIGINT-interrupted sleep
 				[[ "${interrupted}" -eq 1 ]] && break
 			done
 			printf '\n'
