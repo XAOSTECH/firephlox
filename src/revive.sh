@@ -50,7 +50,9 @@ firephlox_revive() {
 	# --- Revive 1: Locate and stage the snapshot -------------------------
 	firephlox_section 'Revive 1 · Extracting the genome — staging snapshot'
 
-	local stage_dir; stage_dir="$(mktemp -d)"
+	local _fp_cache="${HOME}/.cache/firephlox"
+	mkdir -p "${_fp_cache}"
+	local stage_dir; stage_dir="$(mktemp -d -p "${_fp_cache}" stage.XXXXXXXX)"
 	# shellcheck disable=SC2064
 	trap "rm -rf -- '${stage_dir}'" RETURN EXIT
 
@@ -335,7 +337,7 @@ _fp_stage_snapshot() {
 	zip_size="$(firephlox_privileged du -h "${zip_file}" 2>/dev/null | cut -f1 || true)"
 	firephlox_ok "Specimen (${zip_size}): ${zip_file}"
 
-	local tmp_zip; tmp_zip="$(mktemp --suffix=.zip)"
+	local tmp_zip; tmp_zip="$(mktemp -p "${HOME}/.cache/firephlox" --suffix=.zip)"
 	# shellcheck disable=SC2064
 	trap "rm -f -- '${tmp_zip}'" RETURN
 
@@ -448,9 +450,11 @@ firephlox_cleanup() {
 	mapfile -t profiles < <(firephlox_discover_profiles)
 	local base; base="$(dirname "${profiles[0]:-}" 2>/dev/null)"
 	[[ -d "${base}" ]] || firephlox_die 'No Firefox profile directory found.'
+	local cache="${HOME}/.cache/firephlox"
 
 	local count=0 total_kb=0 d dir_kb
 
+	# Pre-revive backup directories in the profile area.
 	while IFS= read -r -d '' d; do
 		dir_kb="$(du -sk "${d}" 2>/dev/null | cut -f1 || printf '0')"
 		total_kb=$(( total_kb + dir_kb ))
@@ -462,6 +466,23 @@ firephlox_cleanup() {
 		fi
 		count=$(( count + 1 ))
 	done < <(find "${base}" -maxdepth 1 -name '*.pre-revive-*' -print0 2>/dev/null)
+
+	# Stale staging directories left behind in the cache area (e.g. from an
+	# interrupted extraction). These are ephemeral by design – no other
+	# contents in ~/.cache/firephlox/ match the stage.* prefix.
+	if [[ -d "${cache}" ]]; then
+		while IFS= read -r -d '' d; do
+			dir_kb="$(du -sk "${d}" 2>/dev/null | cut -f1 || printf '0')"
+			total_kb=$(( total_kb + dir_kb ))
+			if firephlox_is_dry_run; then
+				firephlox_info "(dry-run) rm -rf ${d}"
+			else
+				rm -rf -- "${d}"
+				firephlox_ok "Removed staging: $(basename "${d}")"
+			fi
+			count=$(( count + 1 ))
+		done < <(find "${cache}" -maxdepth 1 -name 'stage.*' -print0 2>/dev/null)
+	fi
 
 	if [[ "${count}" -eq 0 ]]; then
 		firephlox_info 'The ward is already spotless. The patient is in remarkable condition.'
@@ -476,7 +497,7 @@ firephlox_cleanup() {
 
 	local dir_word; [[ "${count}" -eq 1 ]] && dir_word='directory' || dir_word='directories'
 	printf '\n'
-	firephlox_ok "${count} backup ${dir_word} removed – ${size_hr} returned to the patient."
+	firephlox_ok "${count} ${dir_word} removed – ${size_hr} returned to the patient."
 	firephlox_info 'Remarkable what a little housekeeping can do for the prognosis.'
 }
 
